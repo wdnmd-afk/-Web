@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>果果剧库</title>
+<link rel="stylesheet" href="/assets/player.css">
+<style>
+:root{color-scheme:light dark;--bg:#f5f7fb;--panel:#fff;--text:#182234;--muted:#64748b;--line:#dfe5ee;--brand:#2563eb;--danger:#dc2626}
+.library-title{display:flex;align-items:baseline;gap:4px 10px;flex-wrap:wrap;min-width:0}.library-updated{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.directory-input{display:flex;gap:6px;align-items:end}.directory-input label{flex:1}.directory-input input{width:100%}
+@media(prefers-color-scheme:dark){:root{--bg:#111827;--panel:#1f2937;--text:#f3f4f6;--muted:#a8b4c8;--line:#374151}}
+*{box-sizing:border-box}html,body{height:100%;margin:0}body{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px}
+header{flex:none;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);max-height:48vh;overflow:auto}h1{font-size:21px;margin:0}h2{font-size:20px;margin:0}.heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+input,select,button{font:inherit;max-width:100%;border:1px solid var(--line);border-radius:7px;padding:7px 9px;background:var(--panel);color:var(--text)}input[type=checkbox]{accent-color:var(--brand);width:17px;height:17px;flex:none}button{cursor:pointer;background:var(--brand);border-color:var(--brand);color:white}button.secondary{background:var(--panel);color:var(--text);border-color:var(--line)}button.danger{background:var(--danger);border-color:var(--danger)}button:disabled{opacity:.5;cursor:not-allowed}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:9px}.toolbar input[type=search]{flex:1;min-width:140px}.small,.statusbar{font-size:12px;line-height:1.6;color:var(--muted)}.statusbar{margin-top:6px}.error{color:var(--danger);white-space:pre-wrap;overflow-wrap:anywhere}.notice{font-size:12px;margin-top:7px;max-height:72px;overflow:auto}.layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(480px,1fr);gap:14px;padding:14px;overflow:hidden}.panel{min-height:0;min-width:0;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}.panel-head{flex:none;padding:12px;border-bottom:1px solid var(--line)}.panel-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:12px}.settings summary{cursor:pointer}.settings-body{padding:6px 0}.settings-grid{display:flex;gap:12px;flex-wrap:wrap;align-items:end}.settings-grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}.settings-grid input[type=number]{width:115px}.settings-grid .wide{flex:1;min-width:230px}.settings-grid input{color:var(--text)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:12px}.card{min-width:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;content-visibility:auto;contain-intrinsic-size:auto 370px}.card.selected{outline:2px solid var(--brand);outline-offset:-2px}.poster{position:relative;aspect-ratio:3/4;background:var(--line);overflow:hidden}.cover{display:block;width:100%;height:100%;object-fit:cover}.cover.placeholder{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}.poster-badge{position:absolute;left:8px;top:8px;padding:3px 7px;border-radius:12px;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:rgba(0,0,0,.65);color:white;font-size:12px}.card-body{padding:9px}.select-line{display:flex;gap:5px;align-items:center;font-size:12px;color:var(--muted)}.card-title{font-weight:700;line-height:1.4;margin:7px 0;overflow-wrap:anywhere}.meta{color:var(--muted);font-size:12px;line-height:1.5}.desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.tag{font-size:11px;padding:2px 6px;border:1px solid var(--line);border-radius:10px}.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:28px 12px}.groups{display:flex;flex-direction:column;gap:12px}.group{border:1px solid var(--line);border-radius:10px;overflow:hidden}.group-head{padding:11px;background:rgba(127,127,127,.045)}.group-heading{display:flex;align-items:start;gap:8px}.group-heading>div{flex:1;min-width:0}.group-title{font-weight:700;overflow-wrap:anywhere}.group-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.group-actions button{font-size:12px;padding:5px 8px}.episode-list{display:none}.group.open .episode-list{display:block}.episode{display:grid;grid-template-columns:22px minmax(0,1fr);gap:7px;padding:10px;border-top:1px solid var(--line)}.episode-main{min-width:0}.episode-heading{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.episode-path{overflow-wrap:anywhere;max-height:48px;overflow:auto}.episode .error{max-height:120px;overflow:auto}.episode-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}.episode-actions button{font-size:12px;padding:4px 8px}.pill{border-radius:12px;padding:2px 8px;font-size:11px;background:var(--line)}.running,.parsing{background:#fef3c7;color:#92400e}.success{background:#dcfce7;color:#166534}.failed{background:#fee2e2;color:#991b1b}.queued{background:#dbeafe;color:#1d4ed8}.paused,.canceled{background:#e5e7eb;color:#374151}.progress{height:7px;background:var(--line);border-radius:9px;overflow:hidden;margin:7px 0 3px}.progress>span{display:block;height:100%;background:var(--brand);transition:width .2s}.group>details{padding:8px}.source-states{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:1080px){.layout{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:8px}.panel-head{max-height:55%;overflow:auto}.cards{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}header{padding:8px 12px}h1{font-size:18px}.toolbar{gap:5px}.toolbar button,.toolbar select,.toolbar input{font-size:12px;padding:6px}.statusbar{font-size:11px}}
+</style>
+<style>
+body{font-size:13px}h2{font-size:18px}.layout{padding:8px;gap:8px}.panel-head{padding:8px 10px}.heading{gap:6px;flex-wrap:nowrap}.heading h2{white-space:nowrap}.heading .toolbar{margin:0;flex-wrap:nowrap}.toolbar{margin-top:6px;gap:5px}.toolbar input,.toolbar select,.toolbar button,.heading button{padding:5px 7px;font-size:12px}.filters{display:grid;grid-template-columns:minmax(80px,1fr) minmax(90px,.62fr) minmax(100px,.66fr)}.filters input[type=search]{width:100%;min-width:0}.filters select{width:100%;min-width:0}.selection-row{flex-wrap:nowrap;gap:4px}.selection-row>button{white-space:nowrap}.selection-row .small{margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.notice{max-height:40px;margin-top:4px}.notice:empty{display:none}.panel-scroll{padding:10px}.group-actions{gap:4px;margin-top:6px}.group-actions button:disabled{display:none}.group-head{padding:9px}.group-actions button{padding:4px 7px}.source-states{gap:5px}.action-menu{position:relative}.action-menu summary{cursor:pointer;list-style:none;padding:5px 8px;border:1px solid var(--line);border-radius:7px;white-space:nowrap;background:var(--panel);font-size:12px}.action-menu summary::-webkit-details-marker{display:none}.action-popover{position:absolute;z-index:5;top:calc(100% + 5px);right:0;min-width:225px;padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 30px #0002;display:grid;gap:6px}.action-popover button{text-align:left}.action-popover p{margin:3px 0}.library-info{margin-top:5px}.library-info summary{border:0;padding:0;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.library-info .action-popover{left:0;right:auto;min-width:280px}.group-heading .small{font-size:11px}.group-head>.small{font-size:11px}.settings-dialog{color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;width:min(700px,calc(100vw - 24px));max-height:85dvh;overflow:auto}.settings-dialog::backdrop{background:#10182788}.settings-dialog .settings-body{padding-top:15px}.settings-dialog .settings-grid{gap:12px}.settings-dialog input,.settings-dialog select{padding:7px 8px}.settings-dialog h2{font-size:20px}.settings-dialog .small{margin-top:10px}.toast{position:fixed;z-index:9;bottom:16px;left:50%;transform:translateX(-50%);padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:var(--panel);box-shadow:0 4px 20px #0002;max-width:90vw;font-size:12px}.toast:empty{display:none}
+@media(max-width:1080px){.layout{padding:5px;gap:5px}.panel-head{padding:7px;max-height:none;overflow:visible}.panel-scroll{padding:7px}.heading h2{font-size:16px}.selection-row .small{font-size:10px}.selection-row>button{padding:4px 6px;font-size:11px}.filters{grid-template-columns:minmax(65px,1fr) 93px 102px}.heading .toolbar button{font-size:11px;padding:4px 6px}.action-menu summary{font-size:11px;padding:4px 6px}}
+.library-filters{grid-template-columns:minmax(76px,.7fr) minmax(90px,.8fr) minmax(120px,1.6fr) auto}.library-filters button{white-space:nowrap}
+@media(max-width:600px){.heading{flex-wrap:wrap}.heading .toolbar{flex-wrap:wrap}.library-filters{grid-template-columns:minmax(0,1fr) minmax(90px,.65fr)}}
+</style>
+<link rel="stylesheet" href="/assets/library-tools.css">
+</head>
+<body>
+  <dialog id="rankingPanel" class="ranking-dialog" aria-labelledby="rankingTitle">
+    <div class="ranking-header">
+      <div class="heading"><h2 id="rankingTitle">站点榜单</h2><div class="ranking-heading-actions"><button id="refreshRankingBtn" class="secondary">刷新</button><button id="closeRankingsBtn" class="secondary" aria-label="关闭榜单">关闭</button></div></div>
+      <div class="ranking-controls"><select id="rankingSource" aria-label="榜单站源"></select><div id="rankingTabs" class="ranking-tabs" role="tablist" aria-label="榜单类型"></div></div>
+      <p id="rankingSummary" class="ranking-summary" aria-live="polite">按站点名次展示，独立于剧库筛选。</p>
+    </div>
+    <div id="rankingContent" class="ranking-content" role="tabpanel" tabindex="0" aria-label="榜单列表" aria-busy="false"><ol id="rankingList" class="ranking-list"></ol></div>
+    <div class="ranking-footer">
+      <div class="ranking-footer-row"><span id="rankingFetchedAt" class="small" role="status" aria-live="polite"></span><button id="rankingMoreBtn" class="secondary" hidden>加载更多</button></div>
+      <p id="rankingError" class="error ranking-error" role="alert"></p><p id="rankingActionStatus" class="ranking-action-status" role="status" aria-live="polite"></p>
+    </div>
+  </dialog>
+  <dialog id="settingsPanel" class="settings-dialog" aria-labelledby="settingsTitle">
+    <div class="heading"><h2 id="settingsTitle">剧库设置</h2><button id="closeSettingsBtn" class="secondary" aria-label="关闭设置">关闭</button></div>
+    <div class="settings-body">
+      <div class="directory-input"><label class="small">下载目录<input id="downloadDirectory" type="text" placeholder="./短剧下载" autocomplete="off"></label><button id="browseDirectoryBtn" class="secondary">选择文件夹</button></div>
+      <p class="small" id="downloadDirectoryHint">点击按钮打开本机系统文件夹选择框，也可输入相对/绝对路径。重启后新合集使用新目录，原任务和文件保留。</p>
+      <div class="settings-grid">
+        <label>下载并发<input id="downloadConcurrency" type="number" min="1" max="32" value="2"></label>
+        <label>剧库请求并发<input id="requestConcurrency" type="number" min="1" max="16" value="2"></label>
+        <label>同站间隔（毫秒）<input id="requestInterval" type="number" min="100" max="60000" step="100" value="500"></label>
+        <label>代理模式<select id="proxyMode"><option value="auto">自动（环境变量 / 系统代理）</option><option value="direct">直连（不使用代理）</option><option value="manual">自定义代理</option></select></label>
+        <label class="wide">代理地址<input id="proxyURL" type="url" placeholder="http://127.0.0.1:7897 或 socks5://127.0.0.1:1080" autocomplete="off"></label>
+        <label>用户名（可选）<input id="proxyUsername" type="text" autocomplete="off"></label>
+        <label>密码（可选）<input id="proxyPassword" type="password" autocomplete="new-password"></label>
+      </div>
+      <div class="toolbar"><button id="saveSettingsBtn">保存并应用</button><button id="checkNetworkBtn" class="secondary">检测当前连接</button><span id="settingsStatus" class="small" aria-live="polite"></span></div>
+      <div class="small">设置自动保存。降低并发不终止正在下载的任务；代理变更用于后续连接，失败任务可重试。同一站源的剧库请求顺序执行，下载与剧库请求使用独立并发。</div>
+    </div>
+    <div class="statusbar" id="configText"></div>
+    <div class="small" id="ffmpegSettingsStatus" role="status"></div>
+  </dialog>
+  <dialog id="playerPanel" class="player-dialog" aria-labelledby="playerTitle">
+    <div class="player-heading"><h2 id="playerTitle">在线观看</h2><button id="closePlayerBtn" class="secondary" aria-label="关闭播放器">关闭</button></div>
+    <div class="player-layout">
+      <div class="player-screen">
+        <div id="playbackStage" class="playback-stage">
+        <video id="onlineVideo" controls playsinline preload="auto" aria-label="在线播放器"></video>
+          <div id="playbackDanmaku" class="playback-danmaku" aria-hidden="true"></div>
+          <svg class="stage-icon-defs" aria-hidden="true" focusable="false"><defs>
+            <symbol id="icoPrev" viewBox="0 0 24 24"><path d="M18 6 8.5 12 18 18V6zM7 6H5v12h2V6z"/></symbol>
+            <symbol id="icoNext" viewBox="0 0 24 24"><path d="M6 6l9.5 6L6 18V6zm11 0h2v12h-2V6z"/></symbol>
+            <symbol id="icoPlay" viewBox="0 0 24 24"><path d="M7 5l13 7-13 7V5z"/></symbol>
+            <symbol id="icoPause" viewBox="0 0 24 24"><path d="M7 5h4v14H7V5zm6 0h4v14h-4V5z"/></symbol>
+            <symbol id="icoReload" viewBox="0 0 24 24"><path d="M12 5V2L7 6.5 12 11V8a4.5 4.5 0 1 1-4.5 4.5H5A7 7 0 1 0 12 5z"/></symbol>
+            <symbol id="icoPip" viewBox="0 0 24 24"><path d="M3 4h18v16H3V4zm2 2v12h14V6H5zm7 5h6v5h-6v-5z"/></symbol>
+            <symbol id="icoExpand" viewBox="0 0 24 24"><path d="M4 4h7v2H6v5H4V4zm16 0v7h-2V6h-5V4h7zM4 13h2v5h5v2H4v-7zm16 0v7h-7v-2h5v-5h2z"/></symbol>
+            <symbol id="icoCollapse" viewBox="0 0 24 24"><path d="M9 4h2v7H4V9h5V4zm6 0h-2v7h7V9h-5V4zM4 13h7v7H9v-5H4v-2zm16 0h-7v7h2v-5h5v-2z"/></symbol>
+            <symbol id="icoPure" viewBox="0 0 24 24"><path d="M3 5h18v14H3V5zm2 2v10h14V7H5zm2 2h10v6H7V9z"/></symbol>
+            <symbol id="icoPureOff" viewBox="0 0 24 24"><path d="M3 5h18v14H3V5zm2 2v10h14V7H5zm2.7 1.3 8 8-1.4 1.4-8-8 1.4-1.4z"/></symbol>
+            <symbol id="icoFull" viewBox="0 0 24 24"><path d="M3 3h7v2H5v5H3V3zm11 0h7v7h-2V5h-5V3zM3 14h2v5h5v2H3v-7zm18 0v7h-7v-2h5v-5h2z"/></symbol>
+            <symbol id="icoFullExit" viewBox="0 0 24 24"><path d="M8 3h2v7H3V8h5V3zm8 0h-2v7h7V8h-5V3zM3 14h7v7H8v-5H3v-2zm18 0h-7v7h2v-5h5v-2z"/></symbol>
+            <symbol id="icoClose" viewBox="0 0 24 24"><path d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5z"/></symbol>
+          </defs></svg>
+          <div id="stageControls" class="stage-controls" role="toolbar" aria-label="播放器控制">
+            <button id="icoPrevBtn" class="stage-btn" title="上一集" aria-label="上一集"><svg aria-hidden="true"><use href="#icoPrev"/></svg></button>
+            <button id="icoPlayBtn" class="stage-btn" title="播放 / 暂停" aria-label="播放或暂停"><svg aria-hidden="true"><use href="#icoPause"/></svg></button>
+            <button id="icoNextBtn" class="stage-btn" title="下一集" aria-label="下一集"><svg aria-hidden="true"><use href="#icoNext"/></svg></button>
+            <button id="icoReloadBtn" class="stage-btn" title="重新加载本集" aria-label="重新加载"><svg aria-hidden="true"><use href="#icoReload"/></svg></button>
+            <span class="stage-sep" aria-hidden="true"></span>
+            <label class="stage-pick" title="倍速"><span aria-hidden="true">倍速</span>
+              <select id="stageRate" aria-label="播放倍速"></select></label>
+            <label class="stage-pick" title="清晰度"><span aria-hidden="true">画质</span>
+              <select id="stageQuality" aria-label="播放清晰度"></select></label>
+            <span class="stage-sep" aria-hidden="true"></span>
+            <button id="icoPipBtn" class="stage-btn" title="画中画" aria-label="画中画" hidden><svg aria-hidden="true"><use href="#icoPip"/></svg></button>
+            <button id="icoPureBtn" class="stage-btn" title="纯净模式" aria-label="纯净模式"><svg aria-hidden="true"><use href="#icoPure"/></svg></button>
+            <button id="icoExpandBtn" class="stage-btn" title="网页全屏" aria-label="网页全屏"><svg aria-hidden="true"><use href="#icoExpand"/></svg></button>
+            <button id="icoFullBtn" class="stage-btn" title="全屏" aria-label="全屏" hidden><svg aria-hidden="true"><use href="#icoFull"/></svg></button>
+            <button id="icoCloseBtn" class="stage-btn" title="关闭播放器" aria-label="关闭播放器"><svg aria-hidden="true"><use href="#icoClose"/></svg></button>
+          </div>
+        </div>
+        <div class="player-toolbar"><button id="previousEpisodeBtn" class="secondary" disabled>上一集</button><button id="nextEpisodeBtn" class="secondary" disabled>下一集</button><button id="retryPlaybackBtn" class="secondary" disabled>重试播放</button><label>倍速 <select id="playbackRate" aria-label="播放倍速"><option value="0.75">0.75 倍</option><option value="1" selected>1 倍</option><option value="1.25">1.25 倍</option><option value="1.5">1.5 倍</option><option value="2">2 倍</option></select></label><label title="降低清晰度可减少转码开销、加快起播；源站没有更高档位时保持原样">清晰度 <select id="playbackQuality" aria-label="播放清晰度"></select></label><label><input id="autoNextEpisode" type="checkbox" checked> 自动下一集</label><label title="当前集缓冲完成且临近播完时，提前准备下一集；关闭后释放待播缓存"><input id="prefetchNextEpisode" type="checkbox" checked> 预缓存下一集</label><span id="prefetchStatus" class="small" role="status" aria-live="polite" hidden></span><label id="danmakuControl" hidden title="红果弹幕按播放时间加载；开关会记住上次选择"><input id="danmakuEnabled" type="checkbox" checked> 弹幕</label><span id="danmakuStatus" class="small" role="status" aria-live="polite" hidden></span><button id="pureModeBtn" class="secondary" title="只保留画面与播放控件，隐藏标题、工具栏和选集，画面更大">纯净模式</button><button id="webFullscreenBtn" class="secondary" title="画面铺满浏览器窗口，保留标签栏和地址栏">网页全屏</button><button id="pipBtn" class="secondary" hidden title="弹出可拖动、可缩放的悬浮小窗，切到其他窗口也能继续看">画中画</button><button id="playerFullscreenBtn" class="secondary" hidden>全屏</button></div>
+        <div id="playbackStatus" class="small" role="status" aria-live="polite"></div>
+        <div id="playbackError" class="error" role="alert"></div>
+        <p id="playbackHint" class="small player-hint">直接观看，不加入下载任务、不保存视频文件。进度条支持跳转，关闭窗口即停止取流。</p>
+      </div>
+      <nav class="player-episodes" aria-label="选择播放分集"><div id="playbackEpisodeCount" class="small"></div><div id="playbackEpisodes" class="player-episode-list"></div></nav>
+    </div>
+  </dialog>
+  <div class="toast" id="messageText" role="status" aria-live="polite"></div>
+<main class="layout">
+  <section class="panel" aria-label="剧库">
+    <div class="panel-head">
+      <div class="heading"><div class="library-title"><h2>剧库 <span id="dramaCount" class="small"></span><button id="openRankingsBtn" class="secondary" aria-haspopup="dialog" aria-controls="rankingPanel">榜单</button></h2><span id="libraryUpdatedAt" class="small library-updated"></span></div><div class="toolbar"><button id="refreshBtn" class="secondary">更新剧库</button><details id="libraryActionsMenu" class="action-menu library-actions" open><summary aria-label="更多剧库操作">更多 ▾</summary><div class="action-popover"><button id="openSettingsBtn" class="secondary">代理 / 设置</button><span id="libraryMenuUpdatedAt" class="small"></span></div></details></div></div>
+      <div id="libraryFilters" class="toolbar filters library-filters"><select id="sourceSelect" aria-label="站源筛选"><option value="">全部站源</option></select><select id="channelSelect" aria-label="分类筛选"><option value="">全部分类</option></select><select id="sortSelect" aria-label="剧库排序" title="排序当前已加载的剧集；缺失数据置后，热度与播放量分别排序。"><option value="default">默认排序</option><option value="newest">最新上线</option><option value="oldest">最早上线</option><option value="heat">热度最高</option><option value="views">播放最多</option><option value="title">名称排序</option></select><input id="searchInput" type="search" aria-label="搜索剧库" maxlength="80" placeholder="本地筛选，回车联网搜红果"><button id="onlineSearchBtn" class="secondary" title="查找本地尚未加载的红果剧集；输入关键词后也可按回车">联网搜索</button></div>
+      <div class="toolbar selection-row"><button id="selectVisibleBtn" class="secondary" title="全选当前筛选列表">全选</button><button id="invertVisibleBtn" class="secondary" title="反选当前筛选列表">反选</button><button id="deselectDramasBtn" class="secondary">取消勾选</button><button id="enqueueBtn">加入下载</button><span id="dramaSelection" class="small"></span><span id="libraryStatus" class="small" aria-live="polite"></span></div>
+    </div>
+    <div id="libraryScroll" class="panel-scroll" tabindex="0" aria-label="滚动剧库"><div id="cards" class="cards"></div></div>
+  </section>
+  <aside class="panel" aria-label="下载合集">
+    <div class="panel-head">
+      <div class="heading"><h2>下载合集 <span id="taskCount" class="small"></span></h2><details class="action-menu"><summary>操作说明</summary><div class="action-popover small"><p>清理仅移除勾选任务记录，不删除视频。</p><p>暂停保留已完成分集，当前分集继续时重新下载。</p><p>完结以站点标记为准，未知不算未完结。</p><p>两栏列表分别独立滚动。</p></div></details></div>
+      <div class="toolbar filters"><input id="taskSearch" type="search" placeholder="搜索下载合集" aria-label="搜索下载合集"><select id="taskStatus" aria-label="下载状态"><option value="">全部状态</option><option value="completed">已完成</option><option value="failed">失败</option><option value="unfinished">未完成</option><option value="running">进行中</option><option value="paused">已暂停</option><option value="canceled">已取消</option></select><select id="releaseStatus" aria-label="剧集完结状态"><option value="">全部完结状态</option><option value="finished">完结</option><option value="ongoing">未完结</option><option value="unknown">状态未知</option></select></div>
+      <div class="toolbar selection-row"><button id="selectGroupsBtn" class="secondary" title="全选当前筛选的合集">全选</button><button id="invertGroupsBtn" class="secondary" title="反选当前筛选的合集">反选</button><button id="deselectGroupsBtn" class="secondary">取消勾选</button>
+        <details id="batchMenu" class="action-menu"><summary>批量操作 ▾</summary><div class="action-popover"><button id="pauseSelectedBtn" class="secondary">暂停所选</button><button id="resumeSelectedBtn" class="secondary">继续所选</button><button id="cancelSelectedBtn" class="secondary">取消所选下载</button><button id="retrySelectedBtn" class="secondary">重试失败 / 取消</button><button id="updateSelectedBtn" class="secondary">更新所选合集</button><button id="mergeSelectedBtn">合并所选合集</button><label class="small"><input id="deleteEpisodesAfterMerge" type="checkbox"> 合并成功后删除分集文件</label><button id="clearTasksBtn" class="danger">清理任务</button></div></details><span id="taskSelection" class="small"></span></div>
+      <div id="taskError" class="error notice"></div>
+      <div id="ffmpegNotice" class="small notice" role="status" aria-live="polite" hidden></div>
+    </div>
+    <div id="taskScroll" class="panel-scroll" tabindex="0" aria-label="滚动下载合集"><div id="groups" class="groups"></div></div>
+  </aside>
+</main>
+<script src="/assets/player-danmaku.js"></script>
+<script src="/assets/player.js"></script>
+<script src="/assets/library-sort.js"></script>
+<script src="/assets/rankings.js"></script>
+<script>
+(() => {
+  const dramas = [];
+  let tasks = [];
+  const selected = new Set();
+  const selectedTasks = new Set();
+  const openGroups = new Set();
+  let visibleIDs = [];
+  let visibleGroups = [];
+  let mergeStates = {};
+  let libraryRevision = 0;
+  let libraryRequest = false;
+  let libraryReload = false;
+  let libraryTimer = null;
+  let libraryBusyText = '';
+  let libraryIsLoading = false;
+  let libraryMetadataRemaining = {};
+  let sortMessage = '';
+  let onlineSearchMessage = '';
+  let onlineSearchQuery = '';
+  let onlineSearchIDs = new Set();
+  let searchController = null;
+  let searchSequence = 0;
+  let taskRequest = false;
+  let cardRender = 0;
+  let config = {};
+  let ffmpegStatus = '';
+  let messageTimer = null;
+  const $ = id => document.getElementById(id);
+  const cards = $('cards');
+  const groupsEl = $('groups');
+  function element(tag, className, text){ const node=document.createElement(tag); if(className)node.className=className; if(text!==undefined)node.textContent=String(text); return node; }
+  function empty(node){ while(node.firstChild)node.removeChild(node.firstChild); }
+  function button(text, action, disabled, className){ const node=element('button',className||'secondary',text); node.disabled=Boolean(disabled); node.addEventListener('click',action); return node; }
+  function setMessage(text, isError){clearTimeout(messageTimer);$('messageText').textContent=text||'';$('messageText').className=isError?'error toast':'toast';if(text)messageTimer=setTimeout(()=>{$('messageText').textContent='';},8000);}
+  async function api(path, options){ const init=options||{}; init.headers=Object.assign({'Accept':'application/json'},init.headers||{}); if(init.body)init.headers['Content-Type']='application/json'; const response=await fetch(path,init); let data; try{data=await response.json();}catch(_){throw new Error('服务器未返回有效 JSON，请确认已启动新版程序');} if(!response.ok)throw new Error(data.error||'HTTP '+response.status); return data; }
+  function post(path, body){ return api(path,{method:'POST',body:JSON.stringify(body)}); }
+  function valueText(value){ if(value===undefined||value===null)return ''; if(Array.isArray(value))return value.length?String(value.length):''; if(typeof value==='object'){ for(const key of ['url','src','path','cover','image','pic','name','title','count','total']){const text=valueText(value[key]);if(text)return text;}return '';} const text=String(value).trim(); return text==='0'?'':text; }
+  function firstNonEmpty(...values){ for(const value of values){const text=valueText(value);if(text)return text;}return ''; }
+  function dramaTitle(drama){ return drama.title||drama.name||'短剧'; }
+  function normalizeSource(value){
+    let source=String(value||'').trim().toLowerCase();
+    if(/^https?:\/\//.test(source)){try{source=new URL(source).hostname;}catch(_){return '';}}
+    source=source.replace(/^www\./,'').split(':')[0];
+    const aliases={hongguo:'hongguo','hongguoduanju.com':'hongguo'};
+    return Object.prototype.hasOwnProperty.call(aliases,source)?aliases[source]:'';
+  }
+  function sourceKey(drama){ return normalizeSource(drama.source||drama.id); }
+  function sourceLabel(value){ const names={hongguo:'红果'};return names[value]||value; }
+  function categoryName(dr){ return firstNonEmpty(dr.categoryName,dr.category_name,dr.typeName,dr.type_name,dr.sortName,dr.sort_name,dr.category,dr.categoryNameSnake,dr.channelName)||'未分类'; }
+  function episodeCount(dr){ return firstNonEmpty(dr.totalEpisode,dr.total_episode,dr.chapterCount,dr.chapter_count,dr.episodeCount,dr.episode_count,dr.episodes,dr.total); }
+  function coverURL(dr){ return firstNonEmpty(dr.cover,dr.coverUrl,dr.cover_url,dr.image,dr.imageUrl,dr.image_url,dr.img,dr.pic,dr.picture,dr.poster,dr.thumb,dr.thumbnail); }
+  function tagsText(dr){ return Array.isArray(dr.tags)?dr.tags.map(valueText).filter(Boolean):[]; }
+  function dramaSearchText(dr){ return [dr.title,dr.name,dr.id,dr.desc,dr.intro,dr.remark,sourceLabel(sourceKey(dr)),categoryName(dr),tagsText(dr).join(' ')].join(' ').toLowerCase(); }
+  function filteredDramas(){ const keyword=$('searchInput').value.trim().toLowerCase();const source=$('sourceSelect').value;const channel=$('channelSelect').value;return dramas.filter(dr=>{if(sourceKey(dr)!=='hongguo'||source&&sourceKey(dr)!==source)return false;const cat=categoryName(dr);if(channel&&cat!==channel)return false;return !keyword||dramaSearchText(dr).includes(keyword)||onlineSearchQuery===keyword&&onlineSearchIDs.has(dr.id);}); }
+  function rebuildOptions(select,values,allLabel,labelFor,reset){ const previous=reset?'':select.value;empty(select);const all=element('option','',allLabel);all.value='';select.appendChild(all);values.forEach(value=>{const option=element('option','',labelFor(value));option.value=value;select.appendChild(option);});select.value=values.includes(previous)?previous:''; }
+  function rebuildSources(){ rebuildOptions($('sourceSelect'),['hongguo'],'全部站源',()=> '红果',false); }
+  function rebuildChannels(reset){ const source=$('sourceSelect').value;const values=Array.from(new Set(dramas.filter(drama=>sourceKey(drama)==='hongguo'&&(!source||sourceKey(drama)===source)).map(categoryName))).sort((left,right)=>left.localeCompare(right,'zh-Hans-CN'));rebuildOptions($('channelSelect'),values,'全部分类',value=>value,reset);updateRefreshLabel(); }
+  function updateLibraryButton(){const source=$('sourceSelect').value;const hongguo=!source||source==='hongguo';const button=$('refreshBtn');button.textContent=libraryIsLoading?'更新中…':'更新剧库';button.disabled=libraryRequest||libraryIsLoading;button.setAttribute('aria-label','更新'+(source?sourceLabel(source):'全部站源')+'剧库');button.title='检查新内容'+(hongguo?'并继续加载历史目录':'')+'，后台分批补充缺失资料；优先当前筛选结果'+(libraryMetadataRemaining[source]?'，待检查 '+libraryMetadataRemaining[source]+' 部':'');}
+  function metadataPriorityIDs(){const pending=new Set(dramas.filter(drama=>!drama.sortMetadata||drama.sortMetadata.version!==1).map(drama=>drama.id));return visibleIDs.filter(id=>pending.has(id)).slice(0,40);}
+  function updateRefreshLabel(){ const source=$('sourceSelect').value;const hongguo=!source||source==='hongguo';updateLibraryButton();$('onlineSearchBtn').hidden=!hongguo;$('libraryFilters').classList.toggle('no-online',!hongguo);$('searchInput').placeholder=hongguo?'本地筛选，回车联网搜红果':'搜索剧名、简介、标签'; }
+  function placeholder(text){ return element('div','cover placeholder',text||'暂无封面'); }
+  function dramaMetaText(drama){return firstNonEmpty(drama.remark,episodeCount(drama)?'共 '+episodeCount(drama)+' 集':'')+(drama.onlineDate?' · '+drama.onlineDate:'');}
+  function dramaCardKey(drama){return JSON.stringify([dramaTitle(drama),sourceKey(drama),categoryName(drama),episodeCount(drama),coverURL(drama),drama.remark,firstNonEmpty(drama.desc,drama.intro),tagsText(drama).slice(0,4)]);}
+  function renderCard(drama){
+    const card=element('div','card'+(selected.has(drama.id)?' selected':''));
+    card.dataset.dramaId=drama.id;card.renderKey=dramaCardKey(drama);
+    const poster=element('div','poster');const cover=coverURL(drama);
+    if(cover){const image=element('img','cover');image.alt=dramaTitle(drama)+' 封面';image.loading='lazy';image.decoding='async';image.src=cover;image.addEventListener('error',()=>{const fallback=placeholder('封面加载失败');fallback.className+=' retry-cover';fallback.title='点击重试；首次运行请等待 FFmpeg 准备完成';fallback.addEventListener('click',()=>{image.src=cover;fallback.replaceWith(image);});image.replaceWith(fallback);});poster.appendChild(image);}else poster.appendChild(placeholder());
+    poster.appendChild(element('span','poster-badge',categoryName(drama)));
+    const body=element('div','card-body');const label=element('label','select-line');const checkbox=element('input');checkbox.type='checkbox';checkbox.checked=selected.has(drama.id);checkbox.setAttribute('aria-label','选择 '+dramaTitle(drama));checkbox.addEventListener('change',()=>{if(checkbox.checked)selected.add(drama.id);else selected.delete(drama.id);card.className='card'+(checkbox.checked?' selected':'');updateDramaSelection();});label.appendChild(checkbox);label.appendChild(document.createTextNode(sourceLabel(sourceKey(drama))));const actions=element('div','card-actions');actions.appendChild(label);actions.appendChild(button('在线观看',()=>window.dramaPlayer.open(drama.id,dramaTitle(drama)),false,'watch-button'));body.appendChild(actions);
+    body.appendChild(element('div','card-title',dramaTitle(drama)));
+    body.appendChild(element('div','meta',dramaMetaText(drama)));
+    const description=firstNonEmpty(drama.desc,drama.intro);if(description)body.appendChild(element('div','meta desc',description));
+    const tags=element('div','tags');tagsText(drama).slice(0,4).forEach(text=>tags.appendChild(element('span','tag',text)));body.appendChild(tags);card.appendChild(poster);card.appendChild(body);return card;
+  }
+  function updateDramaSelection(){ $('dramaSelection').textContent='已选 '+selected.size+' 部'; }
+  function renderDramas(){
+    const filtered=filteredDramas();const mode=$('sortSelect').value;const list=window.JukuLibrarySort.sortDramas(filtered,mode);sortMessage=window.JukuLibrarySort.summary(filtered,mode);$('sortSelect').title='排序当前已加载的剧集；缺失数据置后，热度与播放量分别排序，不同站源统计口径可能不同。'+sortMessage;updateLibraryStatus();visibleIDs=list.map(drama=>drama.id);$('dramaCount').textContent=list.length+' / '+dramas.length;updateDramaSelection();
+
+
+    const previous=new Map(Array.from(cards.querySelectorAll('.card'),card=>[card.dataset.dramaId,card]));
+    const sameOrder=list.length===cards.children.length&&list.every((drama,index)=>cards.children[index].dataset.dramaId===drama.id);
+    if(!sameOrder)empty(cards);
+    const version=++cardRender;let offset=0;
+    function appendBatch(){ if(version!==cardRender)return;const end=Math.min(offset+80,list.length);for(;offset<end;offset++){
+      const drama=list[offset];let card=previous.get(drama.id);
+      if(!card||card.renderKey!==dramaCardKey(drama))card=renderCard(drama);
+      else{const metadata=card.querySelector('.meta'),text=dramaMetaText(drama);if(metadata.textContent!==text)metadata.textContent=text;card.classList.toggle('selected',selected.has(drama.id));card.querySelector('input[type=checkbox]').checked=selected.has(drama.id);}
+      if(sameOrder){if(cards.children[offset]!==card)cards.replaceChild(card,cards.children[offset]);}else cards.appendChild(card);
+    }if(offset<list.length)setTimeout(appendBatch,0); }
+    appendBatch();if(!list.length)cards.appendChild(element('div','empty',dramas.length?'没有符合筛选条件的视频':'暂无已加载视频，可更新剧库。'));
+  }
+  async function loadDramas(update){
+    if(libraryRequest){libraryReload=true;return;}libraryRequest=true;clearTimeout(libraryTimer);updateLibraryButton();
+    const query=update?'?update=1&source='+encodeURIComponent($('sourceSelect').value)+'&priority='+encodeURIComponent(metadataPriorityIDs().join(',')):'?revision='+libraryRevision;
+    try{
+      const result=await api('/api/ui/dramas'+query);libraryRevision=result.revision||0;
+      libraryIsLoading=!!result.loading;libraryMetadataRemaining=result.metadataRemaining||{};
+      if(Array.isArray(result.data)){dramas.length=0;for(const drama of result.data)if(sourceKey(drama)==='hongguo')dramas.push(drama);rebuildSources();rebuildChannels(false);renderDramas();renderTasks(tasks);}
+      const loaded=result.loadedAt&&!result.loadedAt.startsWith('0001')?new Date(result.loadedAt).toLocaleString():'';
+      $('libraryUpdatedAt').textContent=loaded?'更新于 '+loaded:'';
+      $('libraryUpdatedAt').title=$('libraryUpdatedAt').textContent;
+      $('libraryMenuUpdatedAt').textContent=$('libraryUpdatedAt').textContent;
+      const metadata=result.metadata||{};libraryBusyText=result.loading?'正在更新剧库':metadata.running?'后台补充资料 '+metadata.checked+'/'+metadata.total:metadata.total?'已检查 '+metadata.checked+' 部，补齐 '+metadata.updated+' 部'+(metadata.failed?'，'+metadata.failed+' 部待重试':''):!dramas.length?'暂无已加载数据':'';updateLibraryStatus();
+      if(result.loading||metadata.running)libraryTimer=setTimeout(()=>loadDramas(false),result.loading?1200:5000);
+    }catch(error){libraryIsLoading=false;libraryBusyText='更新暂未完成';updateLibraryStatus();}
+    finally{libraryRequest=false;updateLibraryButton();if(libraryReload){libraryReload=false;loadDramas(false);}}
+  }
+  function updateLibraryStatus(){const text=[libraryBusyText,onlineSearchMessage,sortMessage].filter(Boolean).join(' · ');$('libraryStatus').textContent=text;$('libraryStatus').title=text;}
+  function resetOnlineSearch(){searchSequence++;if(searchController)searchController.abort();searchController=null;onlineSearchQuery='';onlineSearchIDs.clear();onlineSearchMessage='';$('onlineSearchBtn').disabled=false;$('onlineSearchBtn').textContent='联网搜索';updateLibraryStatus();}
+  async function searchOnline(){
+    if($('sourceSelect').value&&$('sourceSelect').value!=='hongguo')return;
+    const keyword=$('searchInput').value.trim();if(!keyword){setMessage('请先输入搜索词',true);return;}if(searchController)return;
+    resetOnlineSearch();const sequence=searchSequence;const controller=new AbortController();searchController=controller;
+    $('onlineSearchBtn').disabled=true;$('onlineSearchBtn').textContent='搜索中';onlineSearchMessage='正在联网搜索红果';updateLibraryStatus();
+    try{
+      const result=await api('/api/ui/search?q='+encodeURIComponent(keyword),{signal:controller.signal});
+      if(sequence!==searchSequence||keyword!==$('searchInput').value.trim())return;
+      const matches=(Array.isArray(result.data)?result.data:[]).filter(drama=>sourceKey(drama)==='hongguo');
+      onlineSearchQuery=keyword.toLowerCase();onlineSearchIDs=new Set(matches.map(drama=>drama.id));
+
+      const positions=new Map(dramas.map((drama,index)=>[drama.id,index]));for(const drama of matches){const position=positions.get(drama.id);if(position===undefined){positions.set(drama.id,dramas.length);dramas.push(drama);}else dramas[position]=drama;}
+      onlineSearchMessage=matches.length?'联网返回 '+matches.length+' 部红果'+(result.total>matches.length?'（首批匹配）':''):'联网暂无匹配';
+      if(matches.length&&result.saved===false)onlineSearchMessage+='，缓存未保存';
+      rebuildSources();rebuildChannels(false);renderDramas();updateLibraryStatus();libraryRevision=0;await loadDramas(false);
+    }catch(error){if(sequence===searchSequence&&!controller.signal.aborted){onlineSearchMessage='联网搜索暂不可用，本地筛选仍可使用';updateLibraryStatus();}}
+    finally{if(sequence===searchSequence){searchController=null;$('onlineSearchBtn').disabled=false;$('onlineSearchBtn').textContent='联网搜索';}}
+  }
+  function number(value){const result=Number(value);return Number.isFinite(result)?result:0;}
+  function formatBytes(value){let count=number(value);if(count<=0)return '0 B';const units=['B','KB','MB','GB','TB'];let index=0;while(count>=1024&&index<units.length-1){count/=1024;index++;}return (index?count.toFixed(count>=100?0:1):Math.round(count))+' '+units[index];}
+  function formatTime(value){const seconds=Math.max(0,Math.floor(number(value)));if(!seconds)return '—';const minutes=Math.floor(seconds/60);return (minutes?minutes+'分':'')+(seconds%60)+'秒';}
+  function statusText(status){return {queued:'排队中',parsing:'解析中',running:'下载中',success:'成功',failed:'失败',paused:'已暂停',canceled:'已取消'}[status]||status;}
+  function releaseText(status){return {finished:'完结',ongoing:'未完结',unknown:'状态未知'}[status]||'状态未知';}
+  function phaseText(task){if(task.removeRequested)return '正在停止并清理';if(task.pauseRequested)return '暂停中';if(task.cancelRequested)return '取消中';return {preparing:'准备 FFmpeg',starting:'准备下载',resolving:'解析播放地址',retrying:'等待重试'}[task.phase]||statusText(task.status);}
+  function progressText(task){ if(task.status==='success')return '100%';if(task.status==='running'&&!number(task.mediaTotalSeconds)&&!number(task.totalBytes))return phaseText(task)+' · 进度未知';return Math.max(0,Math.min(100,number(task.progress)))+'%'; }
+  function progressBar(percent){const bar=element('div','progress');const fill=element('span');fill.style.width=Math.max(0,Math.min(100,number(percent)))+'%';bar.appendChild(fill);return bar;}
+  function episodeLabel(task){const sequence=number(task.episode||task.index);return sequence>0?'第'+String(sequence).padStart(3,'0')+'集':task.title||'章节';}
+  function groupStats(group){const stats={success:0,failed:0,running:0,parsing:0,queued:0,paused:0,canceled:0,percent:0,bytes:0,speed:0};group.tasks.forEach(task=>{if(task.status in stats)stats[task.status]++;stats.percent+=task.status==='success'?100:number(task.progress);stats.bytes+=number(task.downloadedBytes);if(task.status==='running')stats.speed+=number(task.speedBytesPerSecond);});stats.percent=group.tasks.length?Math.floor(stats.percent/group.tasks.length):0;return stats;}
+  function buildGroups(){const byID=new Map();tasks.forEach(task=>{const id=task.dramaId||task.dramaTitle||task.id;let group=byID.get(id);if(!group){group={id,title:task.dramaTitle||'短剧',tasks:[],release:'unknown'};byID.set(id,group);}group.tasks.push(task);if(task.releaseStatus)group.release=task.releaseStatus;});return Array.from(byID.values());}
+  function groupMatches(group){const keyword=$('taskSearch').value.trim().toLowerCase();if(keyword&&!group.title.toLowerCase().includes(keyword))return false;const release=$('releaseStatus').value;if(release&&group.release!==release)return false;const status=$('taskStatus').value;const stats=groupStats(group);if(status==='completed')return stats.success===group.tasks.length;if(status==='unfinished')return stats.success!==group.tasks.length;if(status==='failed')return stats.failed>0;if(status==='running')return stats.running+stats.parsing+stats.queued>0;if(status==='paused')return stats.paused>0;if(status==='canceled')return stats.canceled>0;return true;}
+  function selectGroup(group, checked){group.tasks.forEach(task=>{if(checked)selectedTasks.add(task.id);else selectedTasks.delete(task.id);});renderTasks(tasks);}
+  function selectedTaskList(){return tasks.filter(task=>selectedTasks.has(task.id));}
+  function selectedGroupIDs(){return Array.from(new Set(selectedTaskList().map(task=>task.dramaId)));}
+  function updateTaskSelection(){const visible=new Set(visibleGroups.flatMap(group=>group.tasks.map(task=>task.id)));const hidden=selectedTaskList().filter(task=>!visible.has(task.id)).length;$('taskSelection').textContent='已选 '+selectedTasks.size+' 集 / '+selectedGroupIDs().length+' 部'+(hidden?'（隐藏 '+hidden+' 集）':'');for(const id of ['pauseSelectedBtn','resumeSelectedBtn','cancelSelectedBtn','retrySelectedBtn','updateSelectedBtn','mergeSelectedBtn','clearTasksBtn'])$(id).disabled=selectedTasks.size===0;}
+  function renderTasks(next){tasks=next;const existing=new Set(tasks.map(task=>task.id));selectedTasks.forEach(id=>{if(!existing.has(id))selectedTasks.delete(id);});const all=buildGroups();visibleGroups=all.filter(groupMatches);$('taskCount').textContent=visibleGroups.length+' / '+all.length;empty(groupsEl);visibleGroups.forEach(group=>groupsEl.appendChild(renderGroup(group)));if(!visibleGroups.length)groupsEl.appendChild(element('div','empty',tasks.length?'没有符合筛选条件的合集':'在左侧勾选短剧，加入下载队列'));updateTaskSelection();}
+  function renderGroup(group){
+    const stats=groupStats(group);const wrap=element('div','group'+(openGroups.has(group.id)?' open':''));const head=element('div','group-head');const heading=element('div','group-heading');const checkbox=element('input');checkbox.type='checkbox';checkbox.setAttribute('aria-label','选择合集 '+group.title);const selectedCount=group.tasks.filter(task=>selectedTasks.has(task.id)).length;checkbox.checked=selectedCount===group.tasks.length;checkbox.indeterminate=selectedCount>0&&!checkbox.checked;checkbox.addEventListener('change',()=>selectGroup(group,checkbox.checked));heading.appendChild(checkbox);const info=element('div');info.appendChild(element('div','group-title','《'+group.title+'》'));info.appendChild(element('div','small',releaseText(group.release)+' · 共 '+group.tasks.length+' 集 · 成功 '+stats.success+' · 失败 '+stats.failed+' · 下载 '+stats.running+' · 解析 '+stats.parsing+' · 排队 '+stats.queued+' · 暂停 '+stats.paused+' · 取消 '+stats.canceled));heading.appendChild(info);head.appendChild(heading);head.appendChild(progressBar(stats.percent));head.appendChild(element('div','small',stats.percent+'% · 已写入 '+formatBytes(stats.bytes)+' · '+(stats.speed>0?formatBytes(stats.speed)+'/s':'速度 —')));
+    const merge=mergeStates[group.id];if(merge)head.appendChild(element('div',merge.error?'error small':'small','合并：'+({running:'进行中',success:'完成',failed:'失败'}[merge.status]||merge.status)+' '+(merge.progress||0)+'%'+(merge.detail?' · '+merge.detail:'')+(merge.outputPath?' · '+merge.outputPath:'')+(merge.error?' · '+merge.error:'')));
+    const actions=element('div','group-actions');actions.appendChild(button(openGroups.has(group.id)?'收起':'展开',()=>{if(openGroups.has(group.id))openGroups.delete(group.id);else openGroups.add(group.id);renderTasks(tasks);}));
+    const firstPlayable=group.tasks.filter(task=>task.playable).sort((left,right)=>number(left.index)-number(right.index))[0];actions.appendChild(button('播放',()=>window.dramaPlayer.openCollection(firstPlayable.id,group.title),!firstPlayable,'secondary collection-play-button'));
+    actions.appendChild(button('暂停本剧',()=>taskAction('pause',[],[group.id]),stats.running+stats.queued+stats.parsing===0));
+    actions.appendChild(button('继续本剧',()=>taskAction('resume',[],[group.id]),stats.paused===0));
+    actions.appendChild(button('取消本剧',()=>taskAction('cancel',[],[group.id]),stats.running+stats.queued+stats.parsing+stats.paused===0));
+    actions.appendChild(button('重试失败',()=>taskAction('retry',[],[group.id]),stats.failed+stats.canceled===0));
+    actions.appendChild(button('更新本剧',()=>updateGroups([group.id])));actions.appendChild(button('合并本剧',()=>mergeGroups([group.id]),stats.success===0));head.appendChild(actions);wrap.appendChild(head);
+    const list=element('div','episode-list');if(openGroups.has(group.id))group.tasks.forEach(task=>list.appendChild(renderEpisode(task)));wrap.appendChild(list);return wrap;
+  }
+  function renderEpisode(task){
+    const row=element('div','episode');const checkbox=element('input');checkbox.type='checkbox';checkbox.checked=selectedTasks.has(task.id);checkbox.setAttribute('aria-label','选择 '+episodeLabel(task));checkbox.addEventListener('change',()=>{if(checkbox.checked)selectedTasks.add(task.id);else selectedTasks.delete(task.id);renderTasks(tasks);});row.appendChild(checkbox);const content=element('div','episode-main');const heading=element('div','episode-heading');heading.appendChild(element('span','pill '+task.status,phaseText(task)));heading.appendChild(element('strong','',task.status==='parsing'||task.title==='章节获取失败'?task.title:episodeLabel(task)));content.appendChild(heading);content.appendChild(element('div','small episode-path',task.path||''));if(task.error)content.appendChild(element('div','error',task.error));content.appendChild(progressBar(task.progress));content.appendChild(element('div','small',progressText(task)+' · 已写入 '+formatBytes(task.downloadedBytes)+(number(task.totalBytes)?' / '+formatBytes(task.totalBytes):'')+' · '+(number(task.speedBytesPerSecond)>0?formatBytes(task.speedBytesPerSecond)+'/s':'速度 —')));content.appendChild(element('div','small','已用 '+formatTime(task.elapsedSeconds)+' · 剩余 '+formatTime(task.remainingSeconds)+' · 尝试 '+(task.attempt||0)));
+    const actions=element('div','episode-actions');if(task.playable)actions.appendChild(button('播放',()=>window.dramaPlayer.openCollection(task.id,task.dramaTitle),false,'secondary episode-play-button'));if(['running','queued','parsing'].includes(task.status))actions.appendChild(button('暂停',()=>taskAction('pause',[task.id]),task.pauseRequested));if(task.status==='paused')actions.appendChild(button('继续',()=>taskAction('resume',[task.id])));if(['running','queued','parsing','paused'].includes(task.status))actions.appendChild(button('取消',()=>taskAction('cancel',[task.id]),task.cancelRequested));if(['failed','canceled'].includes(task.status))actions.appendChild(button('重试',()=>taskAction('retry',[task.id])));content.appendChild(actions);row.appendChild(content);return row;
+  }
+  async function retryFFmpeg(){try{await post('/api/ui/ffmpeg',{});setMessage('已重新准备 FFmpeg，下载进度会自动更新');await pollTasks();}catch(error){setMessage(error.message,true);}}
+  function renderFFmpeg(state){if(!state)return;const retryCovers=ffmpegStatus&&ffmpegStatus!=='ready'&&state.status==='ready';ffmpegStatus=state.status;let text=state.detail||'首次使用时自动准备 FFmpeg';if(state.status==='downloading'&&number(state.totalBytes)>0)text+=' · '+formatBytes(state.downloadedBytes)+' / '+formatBytes(state.totalBytes);if(state.error)text+='：'+state.error;for(const id of ['ffmpegNotice','ffmpegSettingsStatus']){const target=$(id);empty(target);target.appendChild(element('span',state.status==='failed'?'error':'',text));if(state.status==='failed')target.appendChild(button('重试下载 FFmpeg',retryFFmpeg));if(id==='ffmpegNotice')target.hidden=!['downloading','verifying','failed'].includes(state.status);}if(retryCovers)$('cards').querySelectorAll('.retry-cover').forEach(fallback=>fallback.click());window.dramaPlayer?.updateDependency(state,text);}
+  async function pollTasks(){if(taskRequest)return;taskRequest=true;try{const result=await api('/api/ui/tasks');mergeStates=result.merges||{};renderTasks(result.data||[]);renderFFmpeg(result.ffmpeg);}catch(error){$('taskError').textContent='任务刷新失败：'+error.message;}finally{taskRequest=false;}}
+  async function enqueueSelected(){const ids=Array.from(selected);if(!ids.length){setMessage('请先勾选剧库中的短剧',true);return;}$('enqueueBtn').disabled=true;try{await post('/api/ui/download',{ids});setMessage('已提交 '+ids.length+' 部，章节异步解析后进入下载队列');await pollTasks();}catch(error){setMessage('加入队列失败：'+error.message,true);}finally{$('enqueueBtn').disabled=false;}}
+  async function updateGroups(ids){if(!ids.length){setMessage('请先勾选下载合集',true);return;}try{await post('/api/ui/update',{ids});setMessage('已提交 '+ids.length+' 部更新检查，已有文件保留，只补充新增或缺失分集');await pollTasks();}catch(error){$('taskError').textContent='更新失败：'+error.message;}}
+  async function taskAction(action,ids,dramaIds=[]){const count=dramaIds.length||ids.length;const unit=dramaIds.length?' 部合集':' 个任务';if(!count){setMessage('所选任务中没有可执行此操作的项',true);return;}if(action==='cancel'&&!confirm('取消所选 '+count+unit+'？已完成文件保留，可稍后重试。'))return;try{const result=await post('/api/ui/tasks/'+action,dramaIds.length?{dramaIds}:{ids});$('taskError').textContent='';if(result.data)renderTasks(result.data);setMessage('已提交'+({pause:'暂停',resume:'继续',cancel:'取消',retry:'重试'}[action]||action)+'：'+count+unit);await pollTasks();}catch(error){$('taskError').textContent='操作失败：'+error.message;}}
+  async function clearTasks(){const ids=selectedTaskList().map(task=>task.id);if(!ids.length){setMessage('请先勾选需要清理的任务',true);return;}if(!confirm('清理勾选的 '+ids.length+' 个任务记录？进行中的任务会先停止；已下载视频不会删除。'))return;try{const result=await post('/api/ui/tasks/clear',{ids});ids.forEach(id=>selectedTasks.delete(id));renderTasks(result.data||[]);setMessage('已清理 '+(result.removed||0)+' 个任务'+(result.pending?'，另有 '+result.pending+' 个正在停止后清理':''));}catch(error){$('taskError').textContent='清理失败：'+error.message;}}
+  async function mergeGroups(ids){if(!ids.length){setMessage('请先勾选下载合集',true);return;}const deleteEpisodes=$('deleteEpisodesAfterMerge').checked;if(deleteEpisodes&&!confirm('合并成功后删除 '+ids.length+' 个合集已合并的分集文件，确认继续？'))return;setMessage('正在合并 '+ids.length+' 部，下载区会显示进度');try{const result=await post('/api/ui/merge',{dramaIds:ids,deleteEpisodes});const items=result.data||[];const failed=items.filter(item=>!item.ok);setMessage('合并完成：成功 '+(items.length-failed.length)+'，失败 '+failed.length,failed.length>0);await pollTasks();}catch(error){$('taskError').textContent='合并失败：'+error.message;}}
+  function refreshConfigFields(){ $('downloadDirectory').value=config.outputDirSetting||config.outputDir||'./短剧下载';$('downloadDirectoryHint').textContent=(config.restartRequired?'已保存新目录，重启后生效。':'')+'选择程序所在电脑的文件夹，或输入相对/绝对路径。重启后新合集使用新目录，原任务和文件保留。';$('downloadConcurrency').value=config.concurrency||2;$('requestConcurrency').value=config.requestConcurrency||2;$('requestInterval').value=config.requestIntervalMs||500;$('proxyMode').value=config.proxyMode||'auto';$('proxyURL').value=config.proxyURL||'';$('proxyUsername').value='';$('proxyPassword').value='';$('proxyPassword').placeholder=config.proxyHasAuth?'已保存，留空保留认证':'';updateProxyFields();$('configText').textContent='当前输出：'+(config.outputDir||'')+' · 下载并发 '+(config.concurrency||2)+' · '+(config.network||'')+' · FFmpeg '+(config.ffmpeg||''); }
+  function updateProxyFields(){const disabled=$('proxyMode').value!=='manual';for(const name of ['proxyURL','proxyUsername','proxyPassword'])$(name).disabled=disabled;}
+  async function loadConfig(){try{config=await api('/api/ui/config');refreshConfigFields();}catch(error){$('configText').textContent='配置读取失败：'+error.message;}}
+  async function saveSettings(){
+    const settings={outputDir:$('downloadDirectory').value.trim(),concurrency:number($('downloadConcurrency').value),requestConcurrency:number($('requestConcurrency').value),requestIntervalMs:number($('requestInterval').value)};
+    try{
+      const mode=$('proxyMode').value;if(mode!=='manual')settings.proxyURL=mode;else{const raw=$('proxyURL').value.trim();const username=$('proxyUsername').value;const password=$('proxyPassword').value;if(!(config.proxyHasAuth&&config.proxyMode==='manual'&&raw===config.proxyURL&&!username&&!password)){const endpoint=new URL(raw);if(!['http:','https:','socks5:','socks5h:'].includes(endpoint.protocol))throw new Error('仅支持 HTTP/HTTPS/SOCKS5 代理');if(username||password){endpoint.username=username;endpoint.password=password;}settings.proxyURL=endpoint.toString();}}
+      $('saveSettingsBtn').disabled=true;config=await post('/api/ui/config',settings);refreshConfigFields();$('settingsStatus').textContent=config.restartRequired?'设置已保存；下载目录重启后生效，当前任务保持原路径':'设置已保存并应用';
+    }catch(error){$('settingsStatus').textContent='保存失败：'+error.message;}finally{$('saveSettingsBtn').disabled=false;}
+  }
+  async function checkNetwork(){ $('checkNetworkBtn').disabled=true;$('settingsStatus').textContent='正在检测已保存的网络配置、红果入口和实际媒体，最多约一分钟…';try{const result=await post('/api/ui/network/check',{});$('settingsStatus').textContent=(result.data||[]).map(item=>item.name+'：'+(item.error||[item.status?'HTTP '+item.status:'',item.detail||''].filter(Boolean).join(' · '))).join('；');}catch(error){$('settingsStatus').textContent='检测失败：'+error.message;}finally{$('checkNetworkBtn').disabled=false;} }
+  async function chooseDownloadDirectory(){const button=$('browseDirectoryBtn');if(button.disabled)return;button.disabled=true;$('settingsStatus').textContent='请在系统窗口中选择下载文件夹…';try{const result=await post('/api/ui/directory/pick',{initialPath:$('downloadDirectory').value});if(result.canceled){$('settingsStatus').textContent='已取消选择，原目录未修改';return;}$('downloadDirectory').value=result.selectionPath||result.path;$('settingsStatus').textContent='已选择文件夹，请点击“保存并应用”';}catch(error){$('settingsStatus').textContent='选择文件夹失败：'+error.message;}finally{button.disabled=false;}}
+  $('browseDirectoryBtn').addEventListener('click',chooseDownloadDirectory);
+  const compactLibrary=window.matchMedia('(max-width:600px)');
+  function arrangeLibraryActions(){$('libraryActionsMenu').open=!compactLibrary.matches;}
+  arrangeLibraryActions();if(compactLibrary.addEventListener)compactLibrary.addEventListener('change',arrangeLibraryActions);else compactLibrary.addListener(arrangeLibraryActions);
+  $('libraryActionsMenu').addEventListener('click',event=>{if(compactLibrary.matches&&event.target.tagName==='BUTTON')$('libraryActionsMenu').open=false;});
+  document.addEventListener('click',event=>{if(compactLibrary.matches&&!$('libraryActionsMenu').contains(event.target))$('libraryActionsMenu').open=false;});
+  $('settingsPanel').addEventListener('close',()=>{if(compactLibrary.matches&&!$('settingsPanel').open)$('libraryActionsMenu').querySelector('summary').focus();});
+  rebuildSources();$('searchInput').value='';$('sourceSelect').value='hongguo';$('channelSelect').value='';
+  try{const savedSort=localStorage.getItem('juku.librarySort');$('sortSelect').value=window.JukuLibrarySort.modes.includes(savedSort)?savedSort:'default';}catch(_){}
+  $('sortSelect').addEventListener('change',()=>{try{localStorage.setItem('juku.librarySort',$('sortSelect').value);}catch(_){}renderDramas();$('libraryScroll').scrollTop=0;if(sortMessage)setMessage(sortMessage);});
+  window.JukuRankings.init({api,post,getSource:()=>$('sourceSelect').value,sourceLabel,onLibraryChanged:()=>{libraryRevision=0;loadDramas(false);},onDownloadsChanged:pollTasks,play:(id,title)=>window.dramaPlayer.open(id,title)});
+  $('taskSearch').value='';$('taskStatus').value='';$('releaseStatus').value='';
+  $('refreshBtn').addEventListener('click',()=>loadDramas(true));$('searchInput').addEventListener('input',()=>{resetOnlineSearch();renderDramas();});$('sourceSelect').addEventListener('change',()=>{resetOnlineSearch();rebuildChannels(true);renderDramas();});$('channelSelect').addEventListener('change',renderDramas);
+  $('onlineSearchBtn').addEventListener('click',searchOnline);$('searchInput').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.isComposing){event.preventDefault();searchOnline();}});
+  $('selectVisibleBtn').addEventListener('click',()=>{visibleIDs.forEach(id=>selected.add(id));renderDramas();});$('invertVisibleBtn').addEventListener('click',()=>{visibleIDs.forEach(id=>{if(selected.has(id))selected.delete(id);else selected.add(id);});renderDramas();});$('deselectDramasBtn').addEventListener('click',()=>{selected.clear();renderDramas();});$('enqueueBtn').addEventListener('click',enqueueSelected);
+  for(const name of ['taskStatus','releaseStatus'])$(name).addEventListener('change',()=>renderTasks(tasks));$('taskSearch').addEventListener('input',()=>renderTasks(tasks));
+  $('selectGroupsBtn').addEventListener('click',()=>{visibleGroups.forEach(group=>group.tasks.forEach(task=>selectedTasks.add(task.id)));renderTasks(tasks);});$('invertGroupsBtn').addEventListener('click',()=>{visibleGroups.forEach(group=>{const checked=!group.tasks.every(task=>selectedTasks.has(task.id));group.tasks.forEach(task=>{if(checked)selectedTasks.add(task.id);else selectedTasks.delete(task.id);});});renderTasks(tasks);});$('deselectGroupsBtn').addEventListener('click',()=>{selectedTasks.clear();renderTasks(tasks);});
+  for(const [id,action,statuses] of [['pauseSelectedBtn','pause',['running','queued','parsing']],['resumeSelectedBtn','resume',['paused']],['cancelSelectedBtn','cancel',['running','queued','parsing','paused']],['retrySelectedBtn','retry',['failed','canceled']]])$(id).addEventListener('click',()=>taskAction(action,selectedTaskList().filter(task=>statuses.includes(task.status)).map(task=>task.id)));
+  $('updateSelectedBtn').addEventListener('click',()=>updateGroups(selectedGroupIDs()));$('mergeSelectedBtn').addEventListener('click',()=>mergeGroups(selectedGroupIDs()));$('clearTasksBtn').addEventListener('click',clearTasks);$('proxyMode').addEventListener('change',updateProxyFields);$('saveSettingsBtn').addEventListener('click',saveSettings);$('checkNetworkBtn').addEventListener('click',checkNetwork);
+  $('openSettingsBtn').addEventListener('click',()=>{$('settingsPanel').showModal();});$('closeSettingsBtn').addEventListener('click',()=>{$('settingsPanel').close();});$('batchMenu').addEventListener('click',event=>{if(event.target.tagName==='BUTTON')$('batchMenu').open=false;});
+  window.addEventListener('downloadsChanged',pollTasks);
+  loadConfig();loadDramas(false);pollTasks();setInterval(pollTasks,2000);
+})();
+</script>
+</body>
+</html>

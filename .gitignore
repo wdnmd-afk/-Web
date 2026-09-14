@@ -1,0 +1,16 @@
+# 构建产物
+/dist/
+
+# 便携 FFmpeg：由程序自动下载（见 bin/README.md），不入库
+/bin/*
+!/bin/README.md
+
+# 运行时数据与配置：程序自动生成，含本地剧库信息
+/data/
+
+# 下载输出目录
+/短剧下载/
+
+# 系统文件
+.DS_Store
+Thumbs.db
