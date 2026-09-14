@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "果果剧库",
+  "outputfilename": "果果剧库",
+  "frontend:install": "",
+  "frontend:build": "",
+  "frontend:dev:watcher": "",
+  "frontend:dev:serverUrl": "auto",
+  "wailsjsdir": "./frontend",
+  "author": {
+    "name": "juku"
+  },
+  "info": {
+    "companyName": "果果剧库",
+    "productName": "果果剧库",
+    "productVersion": "1.0.0",
+    "copyright": "",
+    "comments": "红果短剧本地点播与下载工具"
+  }
+}

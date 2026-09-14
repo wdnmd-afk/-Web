@@ -155,7 +155,9 @@ func discoverSystemProxy() systemProxy {
 			return parseMacSystemProxy(string(body))
 		}
 	case "windows":
-		body, err := exec.CommandContext(ctx, "reg", "query", `HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`).Output()
+		command := exec.CommandContext(ctx, "reg", "query", `HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`)
+		hideConsoleWindow(command)
+		body, err := command.Output()
 		if err == nil {
 			return parseWindowsSystemProxy(string(body))
 		}

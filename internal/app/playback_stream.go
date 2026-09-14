@@ -167,6 +167,7 @@ func (app *UIApp) streamPlayback(ctx context.Context, cancel context.CancelFunc,
 		}
 	}
 	command := exec.CommandContext(ctx, ffmpeg, args...)
+	hideConsoleWindow(command)
 	stdout, err := command.StdoutPipe()
 	if err != nil {
 		return err

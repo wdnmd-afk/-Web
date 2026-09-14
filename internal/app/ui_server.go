@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -68,6 +69,9 @@ type UIApp struct {
 	parsingInFlight       map[string]bool
 	parsingCancels        map[string]context.CancelFunc
 	closed                bool
+	serverMu              sync.Mutex
+	server                *http.Server
+	serverClosed          bool
 	workerCount           int
 	activeDownloads       int
 	settingsMu            sync.Mutex
@@ -78,6 +82,11 @@ type UIApp struct {
 	playbacks             map[string]*playbackSession
 	playbackPrefetchSlots chan struct{}
 	coverImages           coverImageCache
+	historyOnce           sync.Once
+	history               *watchHistoryStore
+	// windowOpener 由桌面壳注册，用于从页面再开一个原生窗口；浏览器版为空。
+	windowMu     sync.Mutex
+	windowOpener func(DesktopWindowRequest) error
 }
 type uiState struct {
 	Dramas      []Drama                  `json:"dramas,omitempty"`
@@ -202,7 +211,22 @@ func NewUIApp(d *Downloader) *UIApp {
 	return a
 }
 
+// ListenAndServe 监听 addr 并提供管理界面，直到服务出错或被 Shutdown 关闭。
 func (a *UIApp) ListenAndServe(addr string) error {
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	return a.serve(listener, addr)
+}
+
+// Serve 在已建立的监听器上提供管理界面，供桌面壳等宿主复用；
+// 监听地址由 listener 决定，例如 127.0.0.1:0 表示随机端口。
+func (a *UIApp) Serve(listener net.Listener) error {
+	return a.serve(listener, listener.Addr().String())
+}
+
+func (a *UIApp) serve(listener net.Listener, addr string) error {
 	defer a.stopSortMetadata()
 	installer := a.downloader.ffmpegInstallation()
 	defer installer.stop()
@@ -236,10 +260,75 @@ func (a *UIApp) ListenAndServe(addr string) error {
 	mux.HandleFunc("/api/ui/directory/pick", a.handleDirectoryPicker)
 	mux.HandleFunc("/api/ui/image", a.handleImage)
 	a.registerPlaybackRoutes(mux)
+	a.registerHistoryRoutes(mux)
+	a.registerDesktopRoutes(mux)
 	defer a.closePlaybacks()
+	defer func() { _ = a.watchHistory().Flush() }()
 
 	server := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
-	return server.ListenAndServe()
+	a.serverMu.Lock()
+	if a.serverClosed {
+		a.serverMu.Unlock()
+		_ = listener.Close()
+		return http.ErrServerClosed
+	}
+	a.server = server
+	a.serverMu.Unlock()
+	return server.Serve(listener)
+}
+
+// Shutdown 停止 HTTP 服务并释放后台资源：关闭点播会话与 FFmpeg 子进程，
+// 中断正在下载的分集并把它们放回队列，随后保存任务状态与剧库缓存。
+// 重复调用是安全的；ctx 只限制等待活动连接结束的时间。
+func (a *UIApp) Shutdown(ctx context.Context) error {
+	a.serverMu.Lock()
+	server := a.server
+	a.server = nil
+	a.serverClosed = true
+	a.serverMu.Unlock()
+
+	a.closePlaybacks()
+	a.stopSortMetadata()
+
+	a.mu.Lock()
+	a.closed = true
+	if a.libraryCancel != nil {
+		a.libraryCancel()
+	}
+	now := time.Now()
+	for id, task := range a.tasks {
+		if task == nil || task.Status != uiStatusRunning {
+			continue
+		}
+		// 先改状态再取消：worker 只会改写仍为 running 的任务，这样分集会在下次启动时自动续传。
+		task.Status = uiStatusQueued
+		task.Phase = "queued"
+		task.CancelRequested = false
+		task.PauseRequested = false
+		task.SpeedBytesPerSecond = 0
+		task.RemainingSeconds = 0
+		task.UpdatedAt = now
+		if cancel := a.runningCancels[id]; cancel != nil {
+			cancel()
+		}
+	}
+	_ = a.saveStateLocked()
+	dirty := a.libraryDirty
+	a.cond.Broadcast()
+	a.mu.Unlock()
+	if dirty {
+		a.persistLibrary()
+	}
+	_ = a.watchHistory().Flush()
+
+	if server == nil {
+		return nil
+	}
+	err := server.Shutdown(ctx)
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		err = server.Close()
+	}
+	return err
 }
 
 func (a *UIApp) startWorkers() {
@@ -764,6 +853,11 @@ func (a *UIApp) handleImage(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	buf, err := a.loadCoverImage(ctx, remoteURL, nil)
 	if err != nil {
+		if errors.Is(err, errFFmpegPending) {
+			w.Header().Set("Retry-After", "5")
+			http.Error(w, err.Error(), http.StatusServiceUnavailable)
+			return
+		}
 		http.Error(w, a.redactError(err), http.StatusBadGateway)
 		return
 	}

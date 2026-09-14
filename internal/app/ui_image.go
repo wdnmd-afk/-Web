@@ -94,8 +94,13 @@ func (downloader *Downloader) convertHEICCover(ctx context.Context, data []byte)
 	if err != nil {
 		return nil, err
 	}
-	ffmpeg, err := downloader.ensureFFmpeg(ctx)
+	// 封面不等待 FFmpeg 下载：未就绪立即返回，前端在 FFmpeg 就绪后会自动重试。
+	// 否则首次运行时几十个封面请求会一起挂住，占满浏览器到本机的连接。
+	ffmpeg, err := downloader.ffmpegInstallation().tryEnsure()
 	if err != nil {
+		if errors.Is(err, errFFmpegPending) {
+			return nil, err
+		}
 		return nil, fmt.Errorf("封面转换需要 FFmpeg：%w", err)
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -105,6 +110,7 @@ func (downloader *Downloader) convertHEICCover(ctx context.Context, data []byte)
 		"-max_alloc", "67108864", "-protocol_whitelist", "pipe", "-threads", "1", "-f", "hevc", "-i", "pipe:0",
 		"-frames:v", "1", "-an", "-sn", "-vf", strings.Join(filters, ","), "-filter_threads", "1",
 		"-threads", "1", "-c:v", "mjpeg", "-pix_fmt", "yuvj420p", "-q:v", "3", "-f", "image2pipe", "pipe:1")
+	hideConsoleWindow(command)
 	command.Stdin = bytes.NewReader(image.data)
 	var output coverOutput
 	stderr := &cappedStringWriter{limit: 4096}

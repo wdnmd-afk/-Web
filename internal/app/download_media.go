@@ -98,6 +98,7 @@ func (d *Downloader) downloadMediaWithProgress(ctx context.Context, task Task, c
 			"-y", partPath,
 		)
 		cmd := exec.CommandContext(cmdCtx, ffmpeg, args...)
+		hideConsoleWindow(cmd)
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
 			if proxy != nil {

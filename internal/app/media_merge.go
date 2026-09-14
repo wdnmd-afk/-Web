@@ -26,6 +26,7 @@ func probeMergeMedia(ctx context.Context, ffmpeg, path string) (mergeMediaInfo, 
 	command := exec.CommandContext(probeCtx, ffmpeg, "-hide_banner", "-nostdin", "-loglevel", "info",
 		"-protocol_whitelist", "file,pipe", "-i", path, "-map", "0:v:0", "-map", "0:a:0?",
 		"-c", "copy", "-t", "0", "-f", "framehash", "-hash", "sha256", "pipe:1")
+	hideConsoleWindow(command)
 	output := &cappedStringWriter{limit: 64 * 1024}
 	diagnostics := &cappedStringWriter{limit: 64 * 1024}
 	command.Stdout, command.Stderr = output, diagnostics
@@ -69,6 +70,7 @@ func runMergeFFmpeg(ctx context.Context, ffmpeg string, args []string, progress 
 	command := exec.CommandContext(ctx, ffmpeg, append([]string{
 		"-hide_banner", "-nostdin", "-nostats", "-loglevel", "error", "-progress", "pipe:1",
 	}, args...)...)
+	hideConsoleWindow(command)
 	diagnostics := &cappedStringWriter{limit: 64 * 1024}
 	command.Stderr = diagnostics
 	output, err := command.StdoutPipe()

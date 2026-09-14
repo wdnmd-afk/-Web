@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
@@ -114,28 +115,25 @@ func (installer *ffmpegInstaller) update(status, detail string, downloaded, tota
 	installer.mu.Unlock()
 }
 
-func (installer *ffmpegInstaller) ensure(ctx context.Context) (string, error) {
-	if err := ctx.Err(); err != nil {
-		return "", err
-	}
-	installer.mu.Lock()
+// errFFmpegPending 表示 FFmpeg 正在后台准备，调用方应快速失败而不是等待。
+var errFFmpegPending = errors.New("FFmpeg 正在准备中，请稍后重试")
+
+// locate 返回可用的 FFmpeg 路径；没有时启动后台准备并返回等待通道。
+// 调用方持有 installer.mu。
+func (installer *ffmpegInstaller) locateLocked() (string, <-chan struct{}, error) {
 	if installer.state.Status == "ready" {
 		if path, err := exec.LookPath(installer.state.Path); err == nil {
-			installer.mu.Unlock()
-			return path, nil
+			return path, nil, nil
 		}
 		installer.state.Status = "idle"
 	}
 	if installer.done == nil {
 		if path, err := exec.LookPath(portableFFmpeg(installer.configured)); err == nil {
 			installer.state = ffmpegInstallState{Status: "ready", Path: path, Detail: "FFmpeg 已就绪"}
-			installer.mu.Unlock()
-			return path, nil
+			return path, nil, nil
 		}
 		if installer.lastError != nil && time.Since(installer.lastTry) < 30*time.Second {
-			err := installer.lastError
-			installer.mu.Unlock()
-			return "", err
+			return "", nil, installer.lastError
 		}
 		installer.done = make(chan struct{})
 		installer.lastTry = time.Now()
@@ -144,8 +142,20 @@ func (installer *ffmpegInstaller) ensure(ctx context.Context) (string, error) {
 		installer.cancel = cancel
 		go installer.run(installCtx)
 	}
-	done := installer.done
+	return "", installer.done, nil
+}
+
+// ensure 返回可用的 FFmpeg，必要时等待后台准备完成。
+func (installer *ffmpegInstaller) ensure(ctx context.Context) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	installer.mu.Lock()
+	path, done, err := installer.locateLocked()
 	installer.mu.Unlock()
+	if err != nil || done == nil {
+		return path, err
+	}
 	select {
 	case <-ctx.Done():
 		return "", ctx.Err()
@@ -154,6 +164,88 @@ func (installer *ffmpegInstaller) ensure(ctx context.Context) (string, error) {
 		defer installer.mu.Unlock()
 		return installer.state.Path, installer.lastError
 	}
+}
+
+// tryEnsure 与 ensure 相同，但 FFmpeg 尚未就绪时立即返回 errFFmpegPending，
+// 供封面等可稍后重试的请求使用，避免大量请求挂起占满浏览器连接。
+func (installer *ffmpegInstaller) tryEnsure() (string, error) {
+	installer.mu.Lock()
+	defer installer.mu.Unlock()
+	path, done, err := installer.locateLocked()
+	if err != nil || done == nil {
+		return path, err
+	}
+	return "", errFFmpegPending
+}
+
+// FFmpegBundle 是随程序一起分发的 FFmpeg 安装包（与自动下载的文件相同），
+// 首次启动时释放到 bin 目录，之后无需联网。
+type FFmpegBundle struct {
+	Archive []byte
+	License []byte
+	Readme  []byte
+}
+
+// seed 在后台把内置的 FFmpeg 释放到 bin 目录；已有可用 FFmpeg 时不做任何事。
+// 释放期间 ensure 会等待、tryEnsure 返回“准备中”，释放失败则回退到自动下载。
+// 返回的通道在释放结束后关闭，主要供测试等待。
+func (installer *ffmpegInstaller) seed(bundle *FFmpegBundle) <-chan struct{} {
+	finished := make(chan struct{})
+	if bundle == nil || len(bundle.Archive) == 0 || installer.pack.platform == "" {
+		close(finished)
+		return finished
+	}
+	installer.mu.Lock()
+	defer installer.mu.Unlock()
+	if installer.state.Status == "ready" || installer.done != nil {
+		close(finished)
+		return finished
+	}
+	if path, err := exec.LookPath(portableFFmpeg(installer.configured)); err == nil {
+		installer.state = ffmpegInstallState{Status: "ready", Path: path, Detail: "FFmpeg 已就绪"}
+		close(finished)
+		return finished
+	}
+	installer.state = ffmpegInstallState{Status: "verifying", Detail: "正在释放内置 FFmpeg"}
+	installer.done = make(chan struct{})
+	go func() {
+		defer close(finished)
+		path, err := installer.seedInstall(bundle)
+		installer.mu.Lock()
+		defer installer.mu.Unlock()
+		if err != nil {
+			fmt.Printf("内置 FFmpeg 释放失败，将尝试自动下载：%v\n", publicError(err))
+			installer.state = ffmpegInstallState{Status: "idle", Detail: "内置 FFmpeg 释放失败，将尝试自动下载"}
+			installer.lastError = nil
+		} else {
+			installer.state = ffmpegInstallState{Status: "ready", Path: path, Detail: "FFmpeg 已就绪"}
+		}
+		close(installer.done)
+		installer.done = nil
+	}()
+	return finished
+}
+
+func (installer *ffmpegInstaller) seedInstall(bundle *FFmpegBundle) (string, error) {
+	return installer.installFrom(context.Background(), func(ctx context.Context, work string) error {
+		binary := filepath.Join(work, installer.name)
+		if err := unpackFFmpegReader(bytes.NewReader(bundle.Archive), binary, installer.pack); err != nil {
+			return err
+		}
+		for _, document := range []struct {
+			name     string
+			body     []byte
+			checksum string
+		}{{"LICENSE.txt", bundle.License, installer.pack.licenseSHA256}, {"README.txt", bundle.Readme, installer.pack.readmeSHA256}} {
+			if sum := sha256.Sum256(document.body); hex.EncodeToString(sum[:]) != document.checksum {
+				return errors.New("内置 FFmpeg 许可与说明文件校验失败")
+			}
+			if err := os.WriteFile(filepath.Join(work, document.name), document.body, 0o644); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (installer *ffmpegInstaller) run(ctx context.Context) {
@@ -252,6 +344,10 @@ func unpackFFmpeg(archive, output string, pack ffmpegPackage) error {
 		return err
 	}
 	defer input.Close()
+	return unpackFFmpegReader(input, output, pack)
+}
+
+func unpackFFmpegReader(input io.Reader, output string, pack ffmpegPackage) error {
 	reader, err := gzip.NewReader(input)
 	if err != nil {
 		return err
@@ -280,6 +376,7 @@ func validateFFmpeg(ctx context.Context, path string) error {
 	checkCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	command := exec.CommandContext(checkCtx, path, "-hide_banner", "-encoders")
+	hideConsoleWindow(command)
 	output := &cappedStringWriter{limit: 256 * 1024}
 	command.Stdout, command.Stderr = output, output
 	if err := command.Run(); err != nil {
@@ -306,6 +403,34 @@ func (installer *ffmpegInstaller) install(ctx context.Context) (string, error) {
 	if installer.pack.platform == "" {
 		return "", fmt.Errorf("暂不支持自动下载 %s/%s 的 FFmpeg，请将对应可执行文件放入 bin 目录", runtime.GOOS, runtime.GOARCH)
 	}
+	return installer.installFrom(ctx, func(ctx context.Context, work string) error {
+		archive := filepath.Join(work, "download.gz")
+		pack := installer.pack
+		if err := installer.fetch(ctx, "ffmpeg-"+pack.platform+".gz", archive, pack.archiveSHA256, pack.archiveSize, true); err != nil {
+			return err
+		}
+		installer.update("verifying", "正在校验、解压 FFmpeg", pack.archiveSize, pack.archiveSize)
+		if err := unpackFFmpeg(archive, filepath.Join(work, installer.name), pack); err != nil {
+			return err
+		}
+		if err := os.Remove(archive); err != nil {
+			return err
+		}
+		for _, document := range []struct{ remote, local, checksum string }{
+			{pack.platform + ".LICENSE", "LICENSE.txt", pack.licenseSHA256},
+			{pack.platform + ".README", "README.txt", pack.readmeSHA256},
+		} {
+			if err := installer.fetch(ctx, document.remote, filepath.Join(work, document.local), document.checksum, 256*1024, false); err != nil {
+				return fmt.Errorf("下载 FFmpeg 许可与构建说明失败：%w", err)
+			}
+		}
+		return nil
+	})
+}
+
+// installFrom 在 bin 旁建立临时目录，由 populate 放入 FFmpeg 与许可文件，
+// 校验可执行文件后整体移入 bin/<平台> 目录。
+func (installer *ffmpegInstaller) installFrom(ctx context.Context, populate func(ctx context.Context, work string) error) (string, error) {
 	if err := os.MkdirAll(filepath.Dir(installer.directory), 0755); err != nil {
 		return "", fmt.Errorf("无法准备 FFmpeg 目录，请将程序移到可写目录：%w", err)
 	}
@@ -314,34 +439,16 @@ func (installer *ffmpegInstaller) install(ctx context.Context) (string, error) {
 		return "", err
 	}
 	defer os.RemoveAll(work)
-	archive := filepath.Join(work, "download.gz")
-	pack := installer.pack
-	if err := installer.fetch(ctx, "ffmpeg-"+pack.platform+".gz", archive, pack.archiveSHA256, pack.archiveSize, true); err != nil {
+	if err := populate(ctx, work); err != nil {
 		return "", err
 	}
-	installer.update("verifying", "正在校验、解压 FFmpeg", pack.archiveSize, pack.archiveSize)
-	binary := filepath.Join(work, installer.name)
-	if err := unpackFFmpeg(archive, binary, pack); err != nil {
-		return "", err
-	}
-	if err := os.Remove(archive); err != nil {
-		return "", err
-	}
-	for _, document := range []struct{ remote, local, checksum string }{
-		{pack.platform + ".LICENSE", "LICENSE.txt", pack.licenseSHA256},
-		{pack.platform + ".README", "README.txt", pack.readmeSHA256},
-	} {
-		if err := installer.fetch(ctx, document.remote, filepath.Join(work, document.local), document.checksum, 256*1024, false); err != nil {
-			return "", fmt.Errorf("下载 FFmpeg 许可与构建说明失败：%w", err)
-		}
-	}
-	if err := validateFFmpeg(ctx, binary); err != nil {
+	if err := validateFFmpeg(ctx, filepath.Join(work, installer.name)); err != nil {
 		return "", err
 	}
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	if err := os.Rename(work, installer.directory); err != nil {
+	if err := moveDirectory(work, installer.directory); err != nil {
 		installed := filepath.Join(installer.directory, installer.name)
 		if _, lookupErr := exec.LookPath(installed); lookupErr == nil {
 			return installed, nil
@@ -349,4 +456,60 @@ func (installer *ffmpegInstaller) install(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("保存 FFmpeg 失败，请检查 bin 目录权限或已有文件：%w", err)
 	}
 	return filepath.Join(installer.directory, installer.name), nil
+}
+
+// moveDirectory 把整个目录改名到目标位置。Windows 上刚执行过的可执行文件可能被
+// 杀毒软件或系统短暂占用导致改名被拒，因此先重试，仍失败时逐个文件搬过去。
+func moveDirectory(source, target string) error {
+	var err error
+	for attempt := 0; attempt < 10; attempt++ {
+		if err = os.Rename(source, target); err == nil {
+			return nil
+		}
+		if _, statErr := os.Stat(target); statErr == nil {
+			break
+		}
+		time.Sleep(time.Duration(200+attempt*150) * time.Millisecond)
+	}
+	if mkErr := os.MkdirAll(target, 0755); mkErr != nil {
+		return err
+	}
+	entries, readErr := os.ReadDir(source)
+	if readErr != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		from, to := filepath.Join(source, entry.Name()), filepath.Join(target, entry.Name())
+		if renameErr := os.Rename(from, to); renameErr == nil {
+			continue
+		}
+		if copyErr := copyFile(from, to); copyErr != nil {
+			return copyErr
+		}
+	}
+	return nil
+}
+
+func copyFile(from, to string) error {
+	input, err := os.Open(from)
+	if err != nil {
+		return err
+	}
+	defer input.Close()
+	info, err := input.Stat()
+	if err != nil {
+		return err
+	}
+	output, err := os.OpenFile(to, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, info.Mode().Perm()|0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(output, input); err != nil {
+		output.Close()
+		return err
+	}
+	return output.Close()
 }

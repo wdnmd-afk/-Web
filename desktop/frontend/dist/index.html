@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>果果剧库</title>
+<style>
+:root{color-scheme:light dark;--bg:#f5f7fb;--text:#182234;--muted:#64748b;--brand:#2563eb;--danger:#dc2626}
+@media(prefers-color-scheme:dark){:root{--bg:#111827;--text:#f3f4f6;--muted:#a8b4c8}}
+html,body{height:100%;margin:0}
+body{display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;font-size:14px;user-select:none;-webkit-user-select:none}
+main{text-align:center;max-width:520px;padding:24px}
+h1{font-size:22px;margin:0 0 12px}
+.spinner{width:28px;height:28px;margin:0 auto 18px;border:3px solid rgba(127,127,127,.25);border-top-color:var(--brand);border-radius:50%;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+p{margin:6px 0;color:var(--muted);line-height:1.6}
+.error{color:var(--danger);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;-webkit-user-select:text}
+button{display:none;margin-top:14px;font:inherit;padding:7px 16px;border:1px solid var(--brand);border-radius:7px;background:var(--brand);color:#fff;cursor:pointer}
+</style>
+</head>
+<body>
+<main>
+  <div class="spinner" id="spinner"></div>
+  <h1>果果剧库</h1>
+  <p id="message">正在启动内置服务…</p>
+  <p class="error" id="error"></p>
+  <button id="retry" type="button">重试</button>
+</main>
+<script>
+(function(){
+  var message=document.getElementById('message');
+  var errorBox=document.getElementById('error');
+  var spinner=document.getElementById('spinner');
+  var retry=document.getElementById('retry');
+  var attempts=0;
+  function fail(text){
+    spinner.style.display='none';
+    message.textContent='启动失败，请关闭窗口后重新打开；问题持续时检查程序目录是否可写。';
+    errorBox.textContent=text;
+    retry.style.display='inline-block';
+  }
+  function poll(){
+    attempts++;
+    fetch('/desktop/status',{cache:'no-store'}).then(function(r){return r.json();}).then(function(status){
+      if(status.error){fail(status.error);return;}
+      if(status.ready&&status.url){window.location.replace(status.url);return;}
+      if(attempts>200){fail('内置服务长时间未就绪。');return;}
+      setTimeout(poll,150);
+    }).catch(function(err){
+      if(attempts>200){fail(String(err));return;}
+      setTimeout(poll,300);
+    });
+  }
+  retry.addEventListener('click',function(){
+    attempts=0;retry.style.display='none';spinner.style.display='';
+    message.textContent='正在重新连接…';errorBox.textContent='';poll();
+  });
+  poll();
+})();
+</script>
+</body>
+</html>

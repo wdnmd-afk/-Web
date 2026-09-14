@@ -14,3 +14,10 @@
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# 桌面版构建中间产物（Wails 生成）
+/desktop/build/bin/
+/desktop/frontend/wailsjs/
+
+# 桌面版内置的 FFmpeg 安装包：构建脚本自动下载，不入库
+/desktop/ffmpeg/

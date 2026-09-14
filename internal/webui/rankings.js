@@ -84,6 +84,12 @@
       download.setAttribute('aria-label', '下载 ' + title);
       actions.append(watch, download);
       row.append(rank, content, actions);
+      window.JukuMenu?.attach(row, () => [
+        {label: '播放', action: () => { dialog.close(); play(drama.id, title); }},
+        ...(window.JukuWindows?.menuItems({dramaId: drama.id, title}) || []),
+        {separator: true},
+        {label: '加入下载', disabled: download.disabled, action: () => download.click()}
+      ], title);
       return row;
     }
 

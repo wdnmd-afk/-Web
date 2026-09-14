@@ -12,7 +12,7 @@
 
 分发时只需对应平台的一个可执行文件，不需要附带配置、网页资源或启动脚本：
 
-- Windows x64：双击 `juku_windows_amd64.exe`。
+- Windows x64：双击 `果果剧库.exe`（桌面版，原生窗口，不依赖浏览器）或 `juku_windows_amd64.exe`（浏览器版，支持局域网访问）。两者共用同一套 `data/` 与下载目录规则，详见 [桌面版说明](desktop.md)。
 - Apple Silicon：使用 `juku_darwin_arm64`；Intel Mac 使用 `juku_darwin_amd64`。
 - Linux x64：使用 `juku_linux_amd64`。
 - macOS / Linux 进入程序所在目录运行对应文件，例如 Apple Silicon 执行 `./juku_darwin_arm64`。程序会自动打开浏览器；服务器环境可在命令后添加 `-open=false`。
@@ -258,7 +258,7 @@ go build -o dist/juku .
 
 `scripts/build.sh` 生成 `dist/juku_darwin_amd64`、`dist/juku_darwin_arm64`、`dist/juku_linux_amd64`、`dist/juku_windows_amd64.exe`。编译无需安装第三方 Go 依赖；页面资源会自动嵌入程序，不需要单独部署网页文件。
 
-Windows 可使用 `scripts\build.bat` 仅编译 Windows x64 版本。当前验证环境为 macOS：Windows 原生 EXE 已交叉编译，但未在真实 Windows 设备上执行端到端测试。
+Windows 可使用 `scripts\build.bat` 仅编译 Windows x64 版本；桌面版使用 `scripts\build-desktop.bat` 或 `./scripts/build-desktop.sh`，见 [桌面版说明](desktop.md)。当前验证环境为 macOS：Windows 原生 EXE 已交叉编译，但未在真实 Windows 设备上执行端到端测试。
 
 构建后直接分发 `dist/` 中对应平台的可执行文件即可，无需预先生成配置文件。请勿附带自己的 `data/`、旧配置、任务记录、剧库缓存或已下载视频。FFmpeg 缺失时会自动准备，也支持手动提供，详见 [FFmpeg 说明](../bin/README.md)。所有构建和启动脚本均使用相对路径，不依赖开发机器的目录。
 
