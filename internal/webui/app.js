@@ -68,8 +68,8 @@
   function dramaCardKey(drama) { return JSON.stringify([dramaTitle(drama), sourceKey(drama), categoryName(drama), episodeCount(drama), coverURL(drama), drama.remark, tagsText(drama).slice(0, 3)]); }
   function dramaByID(id) { return dramas.find(drama => drama.id === id) || null; }
 
-  // ===== 视图切换：剧库 / 历史 / 下载 / 播放 =====
-  const views = {library: $('libraryView'), history: $('historyView'), downloads: $('downloadsView'), player: $('playerView')};
+  // ===== 视图切换：剧库 / 榜单 / 历史 / 下载 / 播放 =====
+  const views = {library: $('libraryView'), rankings: $('rankingsView'), history: $('historyView'), downloads: $('downloadsView'), player: $('playerView')};
   let currentView = 'library';
   let returnView = 'library';
   // 小窗模式下播放视图始终保留在页面上（只显示悬浮窗），切换其他页面不会关闭播放
@@ -82,8 +82,11 @@
     const floating = Boolean(window.dramaPlayer?.isFloating?.());
     if (name === 'player' && currentView !== 'player') returnView = currentView;
     if (currentView === 'player' && name !== 'player' && !options.fromPlayer && !floating) window.dramaPlayer?.close(true);
+    // 榜单页只在可见时保持在线请求：离开时中止在途请求并回写剧库改动，进入时重新取榜单
+    if (currentView === 'rankings' && name !== 'rankings') window.JukuRankings?.deactivate();
     currentView = name;
     applyViewVisibility();
+    if (name === 'rankings') window.JukuRankings?.activate();
     document.querySelectorAll('.nav button[data-view]').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.view === name)));
     document.body.dataset.view = name;
     const hash = name === 'library' ? '' : '#' + name;
@@ -373,7 +376,7 @@
   rebuildSources(); $('searchInput').value = ''; $('sourceSelect').value = 'hongguo'; $('channelSelect').value = '';
   try {const savedSort = localStorage.getItem('juku.librarySort'); $('sortSelect').value = window.JukuLibrarySort.modes.includes(savedSort) ? savedSort : 'default';} catch (_) {}
   $('sortSelect').addEventListener('change', () => {try {localStorage.setItem('juku.librarySort', $('sortSelect').value);} catch (_) {} renderDramas(); $('libraryScroll').scrollTop = 0; if (sortMessage) setMessage(sortMessage);});
-  window.JukuRankings.init({api, post, getSource: () => $('sourceSelect').value, sourceLabel, onLibraryChanged: () => {libraryRevision = 0; loadDramas(false);}, onDownloadsChanged: pollTasks, play: (id, title) => {$('rankingPanel').close(); window.dramaPlayer.open(id, title);}});
+  window.JukuRankings.init({api, post, getSource: () => $('sourceSelect').value, sourceLabel, onLibraryChanged: () => {libraryRevision = 0; loadDramas(false);}, onDownloadsChanged: pollTasks, play: (id, title) => window.dramaPlayer.open(id, title)});
   $('taskSearch').value = ''; $('taskStatus').value = ''; $('releaseStatus').value = '';
   $('refreshBtn').addEventListener('click', () => loadDramas(true)); $('searchInput').addEventListener('input', () => {resetOnlineSearch(); renderDramas();}); $('sourceSelect').addEventListener('change', () => {resetOnlineSearch(); rebuildChannels(true); renderDramas();}); $('channelSelect').addEventListener('change', renderDramas);
   $('onlineSearchBtn').addEventListener('click', searchOnline); $('searchInput').addEventListener('keydown', event => {if (event.key === 'Enter' && !event.isComposing) {event.preventDefault(); searchOnline();}});

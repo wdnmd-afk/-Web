@@ -1,14 +1,18 @@
 (() => {
   'use strict';
-  window.JukuRankings = {init};
+  // 榜单是导航里的一个页面：app.js 切到本页时调 activate，离开时调 deactivate。
+  // 这里导出稳定的包装函数，实际实现由 init 注册，避免直接导出还未赋值的引用。
+  let onActivate = null, onDeactivate = null;
+  window.JukuRankings = {init, activate: () => onActivate?.(), deactivate: () => onDeactivate?.()};
 
   function init({api, post, getSource, sourceLabel, onLibraryChanged, onDownloadsChanged, play}) {
     const $ = id => document.getElementById(id);
-    const dialog = $('rankingPanel');
     const list = $('rankingList');
     const tabs = $('rankingTabs');
     let boards = [], board = null, entries = [], page = 0, hasMore = false;
     let busy = false, controller = null, sequence = 0, changed = false, fetchedAt = '', updatedText = '';
+    // 榜单是独立页面：active 表示页面当前可见，用来丢弃离开页面后才返回的请求
+    let active = false;
     const lastBoards = new Map(), submitted = new Set(), submitting = new Set();
 
     function node(tag, className, text) {
@@ -59,7 +63,7 @@
       const details = [item.metric, drama.remark || (count ? count + ' 集' : ''), drama.categoryName].filter(Boolean);
       if (details.length) content.appendChild(node('div', 'ranking-meta', details.join(' · ')));
       const actions = node('div', 'ranking-actions');
-      const watch = action('播放', () => { dialog.close(); play(drama.id, title); });
+      const watch = action('播放', () => play(drama.id, title));
       watch.setAttribute('aria-label', '播放 ' + title);
       const download = action(submitted.has(drama.id) ? '已提交' : '下载', async () => {
         if (submitting.has(drama.id) || submitted.has(drama.id)) return;
@@ -85,7 +89,7 @@
       actions.append(watch, download);
       row.append(rank, content, actions);
       window.JukuMenu?.attach(row, () => [
-        {label: '播放', action: () => { dialog.close(); play(drama.id, title); }},
+        {label: '播放', action: () => play(drama.id, title)},
         ...(window.JukuWindows?.menuItems({dramaId: drama.id, title}) || []),
         {separator: true},
         {label: '加入下载', disabled: download.disabled, action: () => download.click()}
@@ -106,7 +110,7 @@
       controls();
       try {
         const result = await api('/api/ui/rankings?board=' + encodeURIComponent(activeBoard.id) + '&page=' + nextPage + (refresh ? '&refresh=1' : ''), {signal});
-        if (ticket !== sequence || !dialog.open) return;
+        if (ticket !== sequence || !active) return;
         if (result.boardId !== activeBoard.id || result.page !== nextPage || !Array.isArray(result.items)) throw new Error('榜单响应不完整，请刷新重试');
         if (nextPage > 1 && result.stale) throw new Error('此页暂时只能取得旧榜单，请刷新后继续');
         const incoming = result.items;
@@ -184,7 +188,7 @@
       try {
         if (!boards.length) {
           const result = await api('/api/ui/rankings', {signal});
-          if (ticket !== sequence || !dialog.open) return;
+          if (ticket !== sequence || !active) return;
           boards = Array.isArray(result.boards) ? result.boards.filter(item => item.source === 'hongguo') : [];
         }
         if (!boards.length) throw new Error('暂未提供可用榜单');
@@ -206,13 +210,21 @@
       }
     }
 
-    $('openRankingsBtn').addEventListener('click', () => {
-      dialog.showModal();
-      $('closeRankingsBtn').focus();
+    // 进入榜单页：清空上次的操作提示，重新取目录（榜单数据不跨页缓存，避免展示过期名次）
+    onActivate = () => {
+      if (active) return;
+      active = true;
       $('rankingActionStatus').textContent = '';
       loadCatalog();
-    });
-    $('closeRankingsBtn').addEventListener('click', () => dialog.close());
+    };
+    // 离开榜单页：中止在途请求；本页新写入剧库的条目在此时通知外部刷新
+    onDeactivate = () => {
+      if (!active) return;
+      active = false;
+      cancel();
+      controls();
+      if (changed) { changed = false; onLibraryChanged(); }
+    };
     $('refreshRankingBtn').addEventListener('click', () => board ? loadPage(1, true) : loadCatalog());
     $('rankingMoreBtn').addEventListener('click', () => { if (!busy && hasMore) loadPage(page + 1); });
     $('rankingSource').addEventListener('change', selectSource);
@@ -223,18 +235,6 @@
       const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
       buttons[next].focus();
       selectBoard(buttons[next].dataset.board);
-    });
-    dialog.addEventListener('click', event => {
-      if (event.target !== dialog) return;
-      const box = dialog.getBoundingClientRect();
-      if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) dialog.close();
-    });
-    dialog.addEventListener('close', () => {
-
-      if (dialog.open) return;
-      cancel();
-      controls();
-      if (changed) { changed = false; onLibraryChanged(); }
     });
   }
 })();

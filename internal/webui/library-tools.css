@@ -1,17 +1,12 @@
-.ranking-dialog{color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(720px,calc(100vw - 20px));height:min(700px,84dvh);max-height:calc(100dvh - 20px);padding:0;overflow:hidden}
-.ranking-dialog::backdrop{background:#10182788}
-.ranking-dialog[open]{display:flex;flex-direction:column}
-.ranking-header{padding:12px 14px 8px;flex:none;border-bottom:1px solid var(--line)}
-.ranking-header h2{font-size:18px}
-.ranking-header .heading{flex-wrap:nowrap}
-.ranking-heading-actions{display:flex;gap:6px;flex:none}
+/* 榜单是导航里的一个页面，外框由 .view / .panel 提供，这里只描述榜单自己的内容 */
 .ranking-controls{display:flex;align-items:center;gap:10px;margin-top:10px;min-width:0}
 .ranking-controls select{width:84px;flex:none;font-size:12px;padding:6px}
 .ranking-tabs{display:flex;gap:4px;min-width:0;overflow-x:auto;scrollbar-width:thin;padding:3px}
 .ranking-tabs button{white-space:nowrap;flex:none;font-size:12px;padding:6px 9px;background:transparent;color:var(--muted);border-color:transparent}
 .ranking-tabs button[aria-selected=true]{background:var(--brand);color:white;border-color:var(--brand)}
 .ranking-summary{margin:7px 0 0;font-size:11px;line-height:1.5;color:var(--muted)}
-.ranking-content{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:0 14px}
+/* 覆盖 .panel-scroll 的四周留白：榜单每行自带上下内距，再加一层会让首行离标题太远 */
+.ranking-content{padding:0 14px}
 .ranking-list{list-style:none;padding:0;margin:0}
 .ranking-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
 .ranking-number{font-size:17px;font-variant-numeric:tabular-nums;text-align:center;color:var(--muted);font-weight:600}
@@ -20,16 +15,14 @@
 .ranking-meta{font-size:11px;color:var(--muted);line-height:1.5;margin-top:2px;overflow-wrap:anywhere}
 .ranking-actions{display:flex;gap:5px;align-items:center}
 .ranking-actions button{padding:5px 8px;font-size:12px;white-space:nowrap}
-.ranking-footer{flex:none;padding:8px 14px 10px;border-top:1px solid var(--line)}
+.ranking-footer{flex:none;padding:8px 14px 10px;border-top:1px solid var(--line);background:var(--panel)}
 .ranking-footer-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:30px}
 .ranking-footer-row .small{font-size:11px;min-width:0}
 .ranking-footer button{font-size:12px;padding:5px 9px;white-space:nowrap}
 .ranking-error,.ranking-action-status{font-size:12px;line-height:1.5;margin:4px 0 0;overflow-wrap:anywhere}
 .ranking-error:empty,.ranking-action-status:empty{display:none}
 .ranking-state{padding:28px 12px;text-align:center;color:var(--muted)}
-.ranking-dialog [hidden]{display:none!important}
 @media(max-width:600px){
-  .ranking-header{padding:10px 10px 8px}
   .ranking-controls{gap:5px}
   .ranking-controls select{width:69px}
   .ranking-tabs{gap:2px}

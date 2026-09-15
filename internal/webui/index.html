@@ -198,7 +198,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .group-heading .small,.group-head>.small{font-size:11px}
 .downloads-filters{grid-template-columns:minmax(120px,2fr) minmax(100px,1fr) minmax(110px,1fr)}
 
-/* ===== 设置 / 榜单弹窗 ===== */
+/* ===== 设置弹窗 ===== */
 .settings-grid{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
 .settings-grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
 .settings-grid input[type=number]{width:115px}.settings-grid .wide{flex:1;min-width:230px}.settings-grid input{color:var(--text)}
@@ -246,6 +246,7 @@ body.window-mini #icoExpandBtn{display:none}
   <div class="brand"><span class="brand-mark" aria-hidden="true">果</span><span>果果剧库</span></div>
   <nav class="nav" role="tablist" aria-label="主导航">
     <button type="button" data-view="library" role="tab" aria-selected="true">剧库</button>
+    <button type="button" data-view="rankings" role="tab" aria-selected="false">榜单</button>
     <button type="button" data-view="history" role="tab" aria-selected="false">观看历史</button>
     <button type="button" data-view="downloads" role="tab" aria-selected="false">下载 <span id="downloadsBadge" class="badge"></span></button>
   </nav>
@@ -253,7 +254,6 @@ body.window-mini #icoExpandBtn{display:none}
     <span id="ffmpegBanner" class="small ffmpeg-banner" role="status" aria-live="polite" hidden></span>
     <span id="libraryUpdatedAt" class="small"></span>
     <button id="refreshBtn" class="secondary">更新剧库</button>
-    <button id="openRankingsBtn" class="secondary" aria-haspopup="dialog" aria-controls="rankingPanel">榜单</button>
     <button id="openSettingsBtn" class="secondary">设置</button>
   </div>
 </header>
@@ -291,6 +291,22 @@ body.window-mini #icoExpandBtn{display:none}
         <button id="enqueueBtn">加入下载</button>
         <span id="dramaSelection" class="small"></span>
         <button id="exitSelectBtn" class="secondary" style="margin-left:auto">退出多选</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 站点榜单 ===== -->
+  <section id="rankingsView" class="view" aria-label="站点榜单" hidden>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="heading"><h2 id="rankingTitle">站点榜单</h2><button id="refreshRankingBtn" class="secondary">刷新</button></div>
+        <div class="ranking-controls"><select id="rankingSource" aria-label="榜单站源"></select><div id="rankingTabs" class="ranking-tabs" role="tablist" aria-label="榜单类型"></div></div>
+        <p id="rankingSummary" class="ranking-summary" aria-live="polite">按站点名次展示，独立于剧库筛选。</p>
+      </div>
+      <div id="rankingContent" class="panel-scroll ranking-content" role="tabpanel" tabindex="0" aria-label="榜单列表" aria-busy="false"><ol id="rankingList" class="ranking-list"></ol></div>
+      <div class="ranking-footer">
+        <div class="ranking-footer-row"><span id="rankingFetchedAt" class="small" role="status" aria-live="polite"></span><button id="rankingMoreBtn" class="secondary" hidden>加载更多</button></div>
+        <p id="rankingError" class="error ranking-error" role="alert"></p><p id="rankingActionStatus" class="ranking-action-status" role="status" aria-live="polite"></p>
       </div>
     </div>
   </section>
@@ -447,19 +463,6 @@ body.window-mini #icoExpandBtn{display:none}
     </div>
   </section>
 </div>
-
-<dialog id="rankingPanel" class="ranking-dialog" aria-labelledby="rankingTitle">
-  <div class="ranking-header">
-    <div class="heading"><h2 id="rankingTitle">站点榜单</h2><div class="ranking-heading-actions"><button id="refreshRankingBtn" class="secondary">刷新</button><button id="closeRankingsBtn" class="secondary" aria-label="关闭榜单">关闭</button></div></div>
-    <div class="ranking-controls"><select id="rankingSource" aria-label="榜单站源"></select><div id="rankingTabs" class="ranking-tabs" role="tablist" aria-label="榜单类型"></div></div>
-    <p id="rankingSummary" class="ranking-summary" aria-live="polite">按站点名次展示，独立于剧库筛选。</p>
-  </div>
-  <div id="rankingContent" class="ranking-content" role="tabpanel" tabindex="0" aria-label="榜单列表" aria-busy="false"><ol id="rankingList" class="ranking-list"></ol></div>
-  <div class="ranking-footer">
-    <div class="ranking-footer-row"><span id="rankingFetchedAt" class="small" role="status" aria-live="polite"></span><button id="rankingMoreBtn" class="secondary" hidden>加载更多</button></div>
-    <p id="rankingError" class="error ranking-error" role="alert"></p><p id="rankingActionStatus" class="ranking-action-status" role="status" aria-live="polite"></p>
-  </div>
-</dialog>
 
 <dialog id="settingsPanel" class="settings-dialog" aria-labelledby="settingsTitle">
   <div class="heading"><h2 id="settingsTitle">设置</h2><button id="closeSettingsBtn" class="secondary" aria-label="关闭设置">关闭</button></div>
