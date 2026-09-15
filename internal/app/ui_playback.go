@@ -39,6 +39,9 @@ type playbackSession struct {
 	// quality 是当前选定的画质（短边像素）。存在会话上，保证预缓存
 	// 与主播放流用同一档位，否则切集时画质会跳变。
 	quality int
+	// meters 统计当前取流的上游与转码输出速率，供界面判断卡顿来源。
+	// 每次新取流重建，不跨分集、跳转和画质切换累计。
+	meters *playbackMeters
 }
 
 type playbackEpisode struct {
@@ -55,6 +58,7 @@ type playbackView struct {
 	Run      uint64                `json:"run"`
 	Duration float64               `json:"duration"`
 	Prefetch *playbackPrefetchView `json:"prefetch,omitempty"`
+	Meters   *playbackMetersView   `json:"meters,omitempty"`
 }
 
 func (app *UIApp) registerPlaybackRoutes(mux *http.ServeMux) {
@@ -300,6 +304,7 @@ func (app *UIApp) playbackStatus(id string, touch bool) (playbackView, bool) {
 	if session.prefetch != nil {
 		view.Prefetch = session.prefetch.view()
 	}
+	view.Meters = session.meters.view()
 	return view, true
 }
 
@@ -401,6 +406,10 @@ func (app *UIApp) handlePlaybackStream(writer http.ResponseWriter, request *http
 	session.run++
 	session.currentIndex = index
 	session.prefetchVersion = 0
+	// 每次取流都换一组新计数器：换集、拖动、切画质都应从零开始，
+	// 否则速率窗口会把上一路流的字节算进来。
+	meters := &playbackMeters{}
+	session.meters = meters
 	run := session.run
 	task := session.tasks[index-1]
 	session.state, session.error, session.duration = "buffering", "", 0
@@ -422,7 +431,7 @@ func (app *UIApp) handlePlaybackStream(writer http.ResponseWriter, request *http
 	}
 	used, err := app.servePrefetchedPlayback(ctx, writer, cache, run, ready)
 	if !used {
-		err = app.streamPlayback(ctx, cancel, writer, task, downloadID, offset, run, quality, ready)
+		err = app.streamPlayback(ctx, cancel, writer, task, downloadID, offset, run, quality, meters, ready)
 	}
 	app.playbackMu.Lock()
 	if current := app.playbacks[id]; current == session && current.run == run {

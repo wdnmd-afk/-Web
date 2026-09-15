@@ -6,45 +6,70 @@
 <title>果果剧库</title>
 <link rel="stylesheet" href="/assets/player.css">
 <style>
-:root{color-scheme:light dark;--bg:#f5f7fb;--panel:#fff;--text:#182234;--muted:#64748b;--line:#dfe5ee;--brand:#2563eb;--danger:#dc2626;--accent:#e11d48}
-@media(prefers-color-scheme:dark){:root{--bg:#111827;--panel:#1f2937;--text:#f3f4f6;--muted:#a8b4c8;--line:#374151}}
+/* --hover / --shadow-* / --radius-* 是全局共用的交互与层次令牌，
+   各区块统一引用，避免每处各写一套阴影和圆角导致观感不一致。 */
+:root{color-scheme:light dark;--bg:#f5f7fb;--panel:#fff;--text:#182234;--muted:#64748b;--line:#dfe5ee;--brand:#2563eb;--brand-soft:#2563eb14;--danger:#dc2626;--accent:#e11d48;
+  --hover:#7f7f7f14;--shadow-sm:0 1px 2px #0f172a0d;--shadow-md:0 4px 16px #0f172a14;--shadow-lg:0 12px 32px #0f172a24;--radius:12px;--radius-sm:8px;
+  --pill-warn-bg:#fef3c7;--pill-warn-fg:#92400e;--pill-ok-bg:#dcfce7;--pill-ok-fg:#166534;--pill-bad-bg:#fee2e2;--pill-bad-fg:#991b1b;
+  --pill-info-bg:#dbeafe;--pill-info-fg:#1d4ed8;--pill-idle-bg:#e5e7eb;--pill-idle-fg:#374151}
+@media(prefers-color-scheme:dark){:root{--bg:#111827;--panel:#1f2937;--text:#f3f4f6;--muted:#a8b4c8;--line:#374151;--brand-soft:#60a5fa1f;
+  --hover:#ffffff12;--shadow-sm:0 1px 2px #0006;--shadow-md:0 4px 16px #0007;--shadow-lg:0 12px 32px #0009;
+  /* 深色下状态胶囊改用半透明底 + 亮色文字，浅色系原值在深底上对比不足 */
+  --pill-warn-bg:#78350f5c;--pill-warn-fg:#fcd34d;--pill-ok-bg:#14532d5c;--pill-ok-fg:#86efac;--pill-bad-bg:#7f1d1d5c;--pill-bad-fg:#fca5a5;
+  --pill-info-bg:#1e3a8a5c;--pill-info-fg:#93c5fd;--pill-idle-bg:#ffffff1a;--pill-idle-fg:#d1d5db}}
 *{box-sizing:border-box}html,body{height:100%;margin:0}
-body{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;font-size:13px}
-h1,h2,h3{margin:0}h2{font-size:18px}
-input,select,button{font:inherit;max-width:100%;border:1px solid var(--line);border-radius:7px;padding:6px 9px;background:var(--panel);color:var(--text)}
+body{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;font-size:13px;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0}h2{font-size:18px;letter-spacing:-.01em}
+input,select,button{font:inherit;max-width:100%;border:1px solid var(--line);border-radius:var(--radius-sm);padding:6px 9px;background:var(--panel);color:var(--text);transition:border-color .15s,background .15s,color .15s,box-shadow .15s}
 input[type=checkbox]{accent-color:var(--brand);width:17px;height:17px;flex:none}
-button{cursor:pointer;background:var(--brand);border-color:var(--brand);color:white}
-button.secondary{background:var(--panel);color:var(--text);border-color:var(--line)}
+input:hover:not(:disabled),select:hover:not(:disabled){border-color:#94a3b880}
+input:focus,select:focus{border-color:var(--brand)}
+button{cursor:pointer;background:var(--brand);border-color:var(--brand);color:white;font-weight:500;box-shadow:var(--shadow-sm)}
+button:hover:not(:disabled){filter:brightness(1.07)}
+button:active:not(:disabled){transform:translateY(1px)}
+button.secondary{background:var(--panel);color:var(--text);border-color:var(--line);font-weight:400}
+button.secondary:hover:not(:disabled){filter:none;background:var(--hover);border-color:#94a3b880}
 button.danger{background:var(--danger);border-color:var(--danger)}
-button:disabled{opacity:.5;cursor:not-allowed}
+button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+/* 尊重「减少动态效果」的系统设置：关掉位移与缩放，保留颜色过渡 */
+@media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important}
+  .card:hover{transform:none}.card:hover .cover{transform:none}button:active:not(:disabled){transform:none}}
 .small,.statusbar{font-size:12px;line-height:1.6;color:var(--muted)}.statusbar{margin-top:6px}
 .error{color:var(--danger);white-space:pre-wrap;overflow-wrap:anywhere}.notice{font-size:12px;margin-top:6px;max-height:40px;overflow:auto}.notice:empty{display:none}
 [hidden]{display:none!important}
 
 /* ===== 顶部导航栏 ===== */
-.appbar{flex:none;display:flex;align-items:center;gap:8px;padding:7px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;white-space:nowrap}
-.brand-mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#f43f5e,#be123c);color:#fff;font-size:13px;display:grid;place-items:center;font-weight:700}
+.appbar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:var(--shadow-sm);z-index:2}
+.brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;white-space:nowrap;letter-spacing:-.01em}
+.brand-mark{width:23px;height:23px;border-radius:7px;background:linear-gradient(135deg,#f43f5e,#be123c);color:#fff;font-size:13px;display:grid;place-items:center;font-weight:700;box-shadow:0 2px 6px #be123c4d}
 .nav{display:flex;gap:2px;margin-left:10px}
-.nav button{background:transparent;border-color:transparent;color:var(--muted);font-weight:600;padding:6px 12px;border-radius:8px;display:inline-flex;align-items:center;gap:6px}
-.nav button:hover{color:var(--text)}
-.nav button[aria-selected=true]{background:var(--bg);color:var(--text)}
+.nav button{background:transparent;border-color:transparent;color:var(--muted);font-weight:600;padding:6px 12px;border-radius:var(--radius-sm);display:inline-flex;align-items:center;gap:6px;box-shadow:none}
+.nav button:hover:not(:disabled){color:var(--text);background:var(--hover);filter:none}
+/* 选中项用品牌色底纹而非灰底，当前所在页面一眼可辨 */
+.nav button[aria-selected=true]{background:var(--brand-soft);color:var(--brand)}
 .nav .badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--brand);color:#fff;font-size:11px;line-height:18px;text-align:center}
 .nav .badge:empty{display:none}
 .appbar-actions{margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0}
 .appbar-actions .small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
 .appbar button{white-space:nowrap}
-.ffmpeg-banner{max-width:360px!important;padding:3px 9px;border-radius:12px;background:#fef3c7;color:#92400e}
-.ffmpeg-banner.error{background:#fee2e2;color:#991b1b}
+/* 顶栏提示条复用状态色令牌，深色模式下不再是刺眼的淡黄底 */
+.ffmpeg-banner{max-width:360px!important;padding:3px 9px;border-radius:12px;background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.ffmpeg-banner.error{background:var(--pill-bad-bg);color:var(--pill-bad-fg)}
 .ffmpeg-banner button{margin-left:6px;font-size:11px;padding:2px 7px}
 
 /* ===== 视图容器 ===== */
 .views{flex:1;min-height:0;display:flex;padding:10px}
 .view{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column}
-.panel{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.panel-head{flex:none;padding:8px 12px;border-bottom:1px solid var(--line)}
+.panel{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-md)}
+.panel-head{flex:none;padding:9px 12px;border-bottom:1px solid var(--line)}
 .panel-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:12px}
+/* 细滚动条：默认样式在窄面板里过于抢眼 */
+.panel-scroll{scrollbar-width:thin;scrollbar-color:#94a3b866 transparent}
+.panel-scroll::-webkit-scrollbar{width:9px;height:9px}
+.panel-scroll::-webkit-scrollbar-thumb{background:#94a3b866;border-radius:5px;border:2px solid transparent;background-clip:content-box}
+.panel-scroll::-webkit-scrollbar-thumb:hover{background:#94a3b8a6;background-clip:content-box}
+.panel-scroll::-webkit-scrollbar-track{background:transparent}
 .heading{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .heading h2{white-space:nowrap}
 .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
@@ -55,45 +80,89 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .library-filters button{white-space:nowrap}
 .selection-row{flex-wrap:nowrap;gap:4px}.selection-row>button{white-space:nowrap}
 .selection-row .small{margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.action-menu{position:relative}.action-menu summary{cursor:pointer;list-style:none;padding:5px 8px;border:1px solid var(--line);border-radius:7px;white-space:nowrap;background:var(--panel);font-size:12px}
+.action-menu{position:relative}.action-menu summary{cursor:pointer;list-style:none;padding:5px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);white-space:nowrap;background:var(--panel);font-size:12px;transition:background .15s,border-color .15s}
+.action-menu summary:hover{background:var(--hover);border-color:#94a3b880}
 .action-menu summary::-webkit-details-marker{display:none}
-.action-popover{position:absolute;z-index:5;top:calc(100% + 5px);right:0;min-width:225px;padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 30px #0002;display:grid;gap:6px}
+.action-popover{position:absolute;z-index:5;top:calc(100% + 5px);right:0;min-width:225px;padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);display:grid;gap:6px}
 .action-popover button{text-align:left}.action-popover p{margin:3px 0}
-.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:32px 12px}
+.empty{grid-column:1/-1;justify-self:stretch;text-align:center;color:var(--muted);padding:32px 12px}
+/* 空状态时网格退化成块级：卡片列宽已固定，居中的定宽轨道会把提示文字挤成窄条 */
+.cards:has(>.empty){display:block}
+/* 文字型按钮：用在区块标题旁的次要跳转，不抢主按钮的视觉重量 */
+.link-btn{background:none;border:0;box-shadow:none;padding:2px 4px;color:var(--muted);font-size:12px;font-weight:400;border-radius:6px}
+.link-btn:hover:not(:disabled){filter:none;color:var(--brand);background:var(--hover)}
 
-/* ===== 剧库卡片：点击即播放 ===== */
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-.card{min-width:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel);content-visibility:auto;contain-intrinsic-size:auto 340px;transition:transform .15s,box-shadow .15s}
-.card:hover{transform:translateY(-2px);box-shadow:0 8px 24px #0002}
+/* ===== 首页「继续观看」横向轨道 =====
+   放在卡片网格之前、随剧库一起滚动，不占固定高度。
+   卡片宽度复用剧库的 --card-w，两处视觉尺寸保持一致。 */
+/* --resume-w 比剧库卡片窄一些：轨道是次要入口，不该抢主网格的视觉重量 */
+.resume-row{--resume-w:158px;margin:0 0 16px}
+/* 多选模式下隐藏轨道：那时用户在批量勾选，轨道点击会直接开播，是干扰 */
+.library-view.selecting .resume-row{display:none}
+.resume-head{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+.resume-title{font-weight:700;font-size:14px}
+.resume-head .link-btn{margin-left:auto}
+/* 横向滚动 + 滚动吸附：一屏放不下时左右滑，卡片边缘自动对齐 */
+.resume-track{display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scrollbar-width:thin;scrollbar-color:#94a3b866 transparent;padding:2px 2px 8px}
+.resume-track::-webkit-scrollbar{height:8px}
+.resume-track::-webkit-scrollbar-thumb{background:#94a3b866;border-radius:5px;border:2px solid transparent;background-clip:content-box}
+.resume-track::-webkit-scrollbar-track{background:transparent}
+.resume-card{flex:none;width:var(--resume-w,150px);scroll-snap-align:start;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;background:var(--panel);cursor:pointer;text-align:left;padding:0;box-shadow:none;color:var(--text);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.resume-card:hover:not(:disabled){filter:none;transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:#00000024}
+/* 16/9 横向缩略图：与剧库的 3/4 竖版封面区分，暗示「这是进度」而非「这是一部新剧」 */
+.resume-thumb{position:relative;aspect-ratio:16/9;background:var(--line);overflow:hidden}
+.resume-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.resume-card:hover .resume-thumb img{transform:none}
+/* 进度条压在缩略图底部，一眼看出看到哪儿 */
+.resume-bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:#00000059}
+.resume-bar>span{display:block;height:100%;background:var(--accent)}
+.resume-play{position:absolute;inset:0;display:grid;place-items:center;background:#0000;transition:background .18s}
+.resume-play svg{width:34px;height:34px;fill:#fff;opacity:0;transform:scale(.82);transition:opacity .18s,transform .18s;filter:drop-shadow(0 2px 8px #0009)}
+.resume-card:hover .resume-play{background:#00000038}
+.resume-card:hover .resume-play svg{opacity:1;transform:scale(1)}
+.resume-body{padding:7px 9px 9px}
+.resume-name{font-weight:600;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.resume-at{color:var(--muted);font-size:11px;line-height:1.5;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ===== 剧库卡片：点击即播放 =====
+   卡片宽高固定：--card-w 控制列宽，正文高度由 --card-body-h 锁死。
+   固定高度让整行卡片底边永远对齐，标题长短、有无简介都不再把某张卡撑高。
+   封面 3/4 + 正文定高 = 卡片总高恒定，contain-intrinsic-size 也能给准确值。 */
+.cards{--card-w:172px;--card-body-h:92px;display:grid;grid-template-columns:repeat(auto-fill,var(--card-w));justify-content:center;gap:16px}
+.card{width:var(--card-w);border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);content-visibility:auto;contain-intrinsic-size:auto calc(var(--card-w)*4/3 + var(--card-body-h));transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.card:hover{transform:translateY(-3px);box-shadow:0 10px 28px #00000021;border-color:#00000024}
 .card.selected{outline:2px solid var(--brand);outline-offset:-2px}
 .poster{position:relative;aspect-ratio:3/4;background:var(--line);overflow:hidden;cursor:pointer}
-.cover{display:block;width:100%;height:100%;object-fit:cover}
+.cover{display:block;width:100%;height:100%;object-fit:cover;transition:transform .3s ease}
+.card:hover .cover{transform:scale(1.04)}
 .cover.placeholder{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
-.poster-badge{position:absolute;left:8px;top:8px;padding:3px 7px;border-radius:12px;max-width:80%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:rgba(0,0,0,.65);color:white;font-size:11px}
-.poster-play{position:absolute;inset:0;display:grid;place-items:center;background:#0000;transition:background .15s;pointer-events:none}
-.poster-play svg{width:46px;height:46px;fill:#fff;opacity:0;transform:scale(.8);transition:opacity .15s,transform .15s;filter:drop-shadow(0 2px 8px #0008)}
-.poster:hover .poster-play{background:#0003}.poster:hover .poster-play svg{opacity:1;transform:scale(1)}
-.resume-badge{position:absolute;left:0;right:0;bottom:0;padding:4px 8px;background:linear-gradient(#0000,#000c);color:#fff;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.poster-badge{position:absolute;left:7px;top:7px;padding:3px 7px;border-radius:12px;max-width:80%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:#00000094;color:white;font-size:11px;backdrop-filter:blur(3px)}
+.poster-play{position:absolute;inset:0;display:grid;place-items:center;background:#0000;transition:background .18s;pointer-events:none}
+.poster-play svg{width:44px;height:44px;fill:#fff;opacity:0;transform:scale(.82);transition:opacity .18s,transform .18s;filter:drop-shadow(0 2px 8px #0009)}
+.poster:hover .poster-play{background:#00000038}.poster:hover .poster-play svg{opacity:1;transform:scale(1)}
+.resume-badge{position:absolute;left:0;right:0;bottom:0;padding:5px 8px;background:linear-gradient(#0000,#000d);color:#fff;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .resume-badge .bar{display:block;height:3px;margin-top:4px;background:#ffffff40;border-radius:2px;overflow:hidden}
 .resume-badge .bar>span{display:block;height:100%;background:var(--accent)}
-.card-body{padding:8px 9px 9px}
-.card-title{font-weight:700;line-height:1.4;margin:0 0 4px;overflow-wrap:anywhere;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* 正文定高 + 纵向弹性：标题占满剩余空间，标签始终贴住卡片底部 */
+.card-body{height:var(--card-body-h);padding:8px 10px 9px;display:flex;flex-direction:column;gap:3px;overflow:hidden}
+.card-title{font-weight:700;line-height:1.35;margin:0;overflow-wrap:anywhere;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .card-title:hover{color:var(--brand)}
 .meta{color:var(--muted);font-size:12px;line-height:1.5}
-.desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.tag{font-size:11px;padding:1px 6px;border:1px solid var(--line);border-radius:10px}
-.card-actions{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:8px}
-.select-line{display:none;gap:5px;align-items:center;font-size:12px;color:var(--muted)}
-.cards.selecting .select-line{display:flex}
-.card-download{font-size:12px;padding:3px 8px;margin-left:auto}
+.card-body .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tags{display:flex;gap:4px;margin-top:auto;overflow:hidden;height:18px;flex-wrap:nowrap}
+.tag{font-size:11px;padding:1px 6px;border:1px solid var(--line);border-radius:10px;color:var(--muted);white-space:nowrap;flex:none}
+/* 勾选框浮在封面左上角，只在多选模式出现，不占正文高度 */
+.select-line{display:none;position:absolute;left:6px;top:6px;z-index:2;margin:0;padding:3px;border-radius:7px;background:#000000a8;backdrop-filter:blur(3px);cursor:pointer}
+.cards.selecting .select-line{display:block}
+.cards.selecting .poster-badge{left:auto;right:7px}
 .selection-bar{display:none;flex:none;align-items:center;gap:6px;padding:8px 12px;border-top:1px solid var(--line);background:var(--panel)}
 .library-view.selecting .selection-bar{display:flex}
 .library-view.selecting #selectModeBtn{background:var(--brand);color:#fff;border-color:var(--brand)}
 
 /* ===== 观看历史 ===== */
 .history-list{display:grid;gap:8px}
-.history-item{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
-.history-item:hover{background:rgba(127,127,127,.06)}
+.history-item{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);transition:background .15s,border-color .15s,box-shadow .15s}
+.history-item:hover{background:var(--hover);border-color:#94a3b859;box-shadow:var(--shadow-sm)}
 .history-cover{width:62px;height:82px;border-radius:6px;object-fit:cover;background:var(--line);cursor:pointer;display:block}
 .history-main{min-width:0}
 .history-title{font-weight:700;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -105,8 +174,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 
 /* ===== 下载合集 ===== */
 .groups{display:flex;flex-direction:column;gap:12px}
-.group{border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.group-head{padding:10px;background:rgba(127,127,127,.045)}
+.group{border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.group:hover{border-color:#94a3b859;box-shadow:var(--shadow-sm)}
+.group-head{padding:10px;background:var(--hover)}
 .group-heading{display:flex;align-items:start;gap:8px}.group-heading>div{flex:1;min-width:0}
 .group-title{font-weight:700;overflow-wrap:anywhere}
 .group-actions{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
@@ -116,8 +186,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .episode-main{min-width:0}.episode-heading{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .episode-path{overflow-wrap:anywhere;max-height:48px;overflow:auto}.episode .error{max-height:120px;overflow:auto}
 .episode-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}.episode-actions button{font-size:12px;padding:4px 8px}
-.pill{border-radius:12px;padding:2px 8px;font-size:11px;background:var(--line)}
-.running,.parsing{background:#fef3c7;color:#92400e}.success{background:#dcfce7;color:#166534}.failed{background:#fee2e2;color:#991b1b}.queued{background:#dbeafe;color:#1d4ed8}.paused,.canceled{background:#e5e7eb;color:#374151}
+.pill{border-radius:12px;padding:2px 8px;font-size:11px;background:var(--line);font-weight:500;white-space:nowrap}
+/* 状态色走令牌：浅色用淡底深字，深色模式改为半透明底 + 亮字，
+   否则原本的淡黄淡绿底在深色面板上刺眼且文字对比不足。 */
+.running,.parsing{background:var(--pill-warn-bg);color:var(--pill-warn-fg)}
+.success{background:var(--pill-ok-bg);color:var(--pill-ok-fg)}
+.failed{background:var(--pill-bad-bg);color:var(--pill-bad-fg)}
+.queued{background:var(--pill-info-bg);color:var(--pill-info-fg)}
+.paused,.canceled{background:var(--pill-idle-bg);color:var(--pill-idle-fg)}
 .progress{height:7px;background:var(--line);border-radius:9px;overflow:hidden;margin:7px 0 3px}.progress>span{display:block;height:100%;background:var(--brand);transition:width .2s}
 .group-heading .small,.group-head>.small{font-size:11px}
 .downloads-filters{grid-template-columns:minmax(120px,2fr) minmax(100px,1fr) minmax(110px,1fr)}
@@ -126,16 +202,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .settings-grid{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
 .settings-grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
 .settings-grid input[type=number]{width:115px}.settings-grid .wide{flex:1;min-width:230px}.settings-grid input{color:var(--text)}
-.settings-dialog{color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;width:min(700px,calc(100vw - 24px));max-height:85dvh;overflow:auto}
-.settings-dialog::backdrop{background:#10182788}
+.settings-dialog{color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;width:min(700px,calc(100vw - 24px));max-height:85dvh;overflow:auto;box-shadow:var(--shadow-lg)}
+.settings-dialog::backdrop{background:#10182788;backdrop-filter:blur(2px)}
 .settings-dialog .settings-body{padding-top:15px}.settings-dialog input,.settings-dialog select{padding:7px 8px}
 .settings-dialog h2{font-size:20px}.settings-dialog .small{margin-top:10px}
 .directory-input{display:flex;gap:6px;align-items:end}.directory-input label{flex:1}.directory-input input{width:100%}
-.toast{position:fixed;z-index:9;bottom:16px;left:50%;transform:translateX(-50%);padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:var(--panel);box-shadow:0 4px 20px #0002;max-width:90vw;font-size:12px}
+.toast{position:fixed;z-index:9;bottom:16px;left:50%;transform:translateX(-50%);padding:9px 16px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel);box-shadow:var(--shadow-lg);max-width:90vw;font-size:12px}
 .toast:empty{display:none}
 
 /* ===== 右键菜单：剧库、榜单、历史、下载合集与播放画面共用 ===== */
-.ctx-menu{position:fixed;z-index:80;min-width:180px;max-width:300px;padding:5px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 36px #0004;display:flex;flex-direction:column;gap:1px;color:var(--text)}
+.ctx-menu{position:fixed;z-index:80;min-width:180px;max-width:300px;padding:5px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:1px;color:var(--text)}
 .ctx-heading{padding:4px 10px 6px;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid var(--line);margin-bottom:3px}
 .ctx-menu button{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;text-align:left;background:transparent;border:0;border-radius:7px;padding:7px 10px;color:var(--text);font-size:12px;white-space:nowrap}
 .ctx-menu button:hover,.ctx-menu button:focus-visible{background:var(--bg);outline:none}
@@ -157,7 +233,8 @@ body.window-mini #icoExpandBtn{display:none}
   .appbar-actions .small{display:none}
   .views{padding:5px}.panel-head{padding:7px}.panel-scroll{padding:7px}
   .library-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.library-filters input[type=search]{grid-column:1 / -1}
-  .cards{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  /* 窄屏缩小固定卡片，保证一行仍能放下两列 */
+  .cards{--card-w:144px;--card-body-h:86px;gap:10px}
   .history-item{grid-template-columns:52px minmax(0,1fr)}.history-cover{width:52px;height:70px}.history-actions{grid-column:2;justify-content:flex-start}
   .downloads-filters{grid-template-columns:1fr 1fr}
 }
@@ -199,7 +276,14 @@ body.window-mini #icoExpandBtn{display:none}
           <span id="libraryStatus" class="small" aria-live="polite"></span>
         </div>
       </div>
-      <div id="libraryScroll" class="panel-scroll" tabindex="0" aria-label="滚动剧库"><div id="cards" class="cards"></div></div>
+      <div id="libraryScroll" class="panel-scroll" tabindex="0" aria-label="滚动剧库">
+        <!-- 继续观看：横向轨道，只在有未看完记录时出现，随剧库一起滚动，不占固定高度 -->
+        <section id="resumeRow" class="resume-row" aria-label="继续观看" hidden>
+          <div class="resume-head"><span class="resume-title">继续观看</span><button id="resumeMoreBtn" class="link-btn" type="button">全部历史</button></div>
+          <div id="resumeTrack" class="resume-track"></div>
+        </section>
+        <div id="cards" class="cards"></div>
+      </div>
       <div class="selection-bar">
         <button id="selectVisibleBtn" class="secondary" title="全选当前筛选列表">全选</button>
         <button id="invertVisibleBtn" class="secondary" title="反选当前筛选列表">反选</button>
@@ -313,7 +397,7 @@ body.window-mini #icoExpandBtn{display:none}
               <span class="stage-sep" aria-hidden="true"></span>
               <button id="muteBtn" class="stage-btn" title="静音（M）" aria-label="静音"><svg aria-hidden="true"><use href="#icoVolume"/></svg></button>
               <input id="volumeSlider" class="volume-slider" type="range" min="0" max="1" step="0.05" value="1" aria-label="音量">
-              <span id="bottomHint" class="small bottom-hint"></span>
+              <span id="stageInfo" class="small bottom-hint" aria-hidden="true"></span>
             </div>
           </div>
           <div id="stageEpisodes" class="stage-episodes" role="region" aria-label="画面内选集">
@@ -334,13 +418,23 @@ body.window-mini #icoExpandBtn{display:none}
           <span id="prefetchStatus" class="small" role="status" aria-live="polite" hidden></span>
           <label id="danmakuControl" hidden title="红果弹幕按播放时间加载；开关会记住上次选择"><input id="danmakuEnabled" type="checkbox" checked> 弹幕</label>
           <span id="danmakuStatus" class="small" role="status" aria-live="polite" hidden></span>
-          <button id="pureModeBtn" class="secondary" title="只保留画面与播放控件，隐藏标题、工具栏和选集">纯净模式</button>
-          <button id="webFullscreenBtn" class="secondary" title="画面铺满整个窗口（W）">网页全屏</button>
-          <button id="floatModeBtn" class="secondary" title="画面缩成可拖动、可等比拉伸的悬浮小窗，边看边逛剧库；大小和位置会记住（I）">小窗模式</button>
-          <button id="popWindowBtn" class="secondary" title="把当前播放弹出到独立窗口，可拖到其他屏幕；页面里的播放随即关闭">独立窗口</button>
-          <button id="pinWindowBtn" class="secondary" hidden title="让这个窗口保持在其他窗口之上">置顶</button>
-          <button id="pipBtn" class="secondary" hidden title="弹出可拖动、可缩放的悬浮小窗">画中画</button>
-          <button id="playerFullscreenBtn" class="secondary" hidden>全屏</button>
+          <span id="netMeter" class="small net-meter" role="status" aria-live="off" hidden title="上游：后端从红果拉取分片的速度，反映网络状况。转码：FFmpeg 输出给浏览器的速度，受本机 CPU 限制。两个都低是网络问题；上游正常而转码低是本机转码跟不上。"></span>
+          <!-- 六个改变画面呈现方式的按钮收进一个折叠菜单：它们在画面内已有对应的图标按钮，
+               平铺在工具栏里既占两行又要逐个辨认。节点和 id 全部保留，
+               因为 player.js 用 pipBtn / playerFullscreenBtn 的 hidden 驱动图标显隐，
+               并通过 .click() 代理事件；floatModeBtn 的文案还会被动态改写。 -->
+          <details id="viewModeMenu" class="action-menu view-menu">
+            <summary title="纯净模式、网页全屏、小窗、独立窗口等画面呈现方式">显示方式 ▾</summary>
+            <div class="action-popover">
+              <button id="pureModeBtn" class="secondary" title="只保留画面与播放控件，隐藏标题、工具栏和选集">纯净模式</button>
+              <button id="webFullscreenBtn" class="secondary" title="画面铺满整个窗口（W）">网页全屏</button>
+              <button id="floatModeBtn" class="secondary" title="画面缩成可拖动、可等比拉伸的悬浮小窗，边看边逛剧库；大小和位置会记住（I）">小窗模式</button>
+              <button id="popWindowBtn" class="secondary" title="把当前播放弹出到独立窗口，可拖到其他屏幕；页面里的播放随即关闭">独立窗口</button>
+              <button id="pinWindowBtn" class="secondary" hidden title="让这个窗口保持在其他窗口之上">置顶</button>
+              <button id="pipBtn" class="secondary" hidden title="弹出可拖动、可缩放的悬浮小窗">画中画</button>
+              <button id="playerFullscreenBtn" class="secondary" hidden>全屏</button>
+            </div>
+          </details>
           <span class="small player-keys" title="空格 播放/暂停 · ←/→ 快退/快进 5 秒 · ↑/↓ 音量 · M 静音 · N/P 下一集/上一集 · E 选集 · &lt; &gt; 倍速 · F 全屏 · W 网页全屏 · I 小窗 · Esc 返回 · 右键画面有更多操作">快捷键 ⌨</span>
         </div>
         <div id="playbackError" class="error" role="alert"></div>

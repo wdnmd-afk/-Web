@@ -35,6 +35,9 @@ type hlsProxy struct {
 	failure  error
 	root     string
 	retries  int
+	// meter 可选，仅点播链路设置：统计从站源实际拉取的媒体字节，用于界面显示上游网速。
+	// 下载链路不设置，保持原有行为不变。
+	meter *playbackRateMeter
 }
 
 var hlsURIAttribute = regexp.MustCompile(`URI="([^"]+)"`)
@@ -224,7 +227,13 @@ func (proxy *hlsProxy) ServeHTTP(writer http.ResponseWriter, request *http.Reque
 				}
 			}
 			writer.WriteHeader(response.StatusCode)
-			_, _ = io.Copy(writer, &checkedMediaReader{reader: response.Body, ctx: request.Context(), fail: proxy.recordError})
+			var segment io.Reader = &checkedMediaReader{reader: response.Body, ctx: request.Context(), fail: proxy.recordError}
+			// 点播会话会挂上计量器，用于统计真实的上游拉流速度；
+			// 下载路径不设置 meter，行为与原先完全一致。
+			if proxy.meter != nil {
+				segment = &meteredReader{reader: segment, meter: proxy.meter}
+			}
+			_, _ = io.Copy(writer, segment)
 			return
 		}
 	}

@@ -33,7 +33,20 @@
 .player-toolbar{flex:none;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0 0}
 .player-toolbar button,.player-toolbar select{font-size:12px;padding:5px 7px}
 .player-toolbar label{display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:12px;color:var(--muted)}
+/* 三个状态文字（预缓存、弹幕、网速）长度随内容变化，任其自然宽度会把整行挤到第二行。
+   允许它们收缩并截断，控件本身则不参与压缩，这样工具栏保持单行。 */
+.player-toolbar #prefetchStatus,.player-toolbar #danmakuStatus{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.player-toolbar>button,.player-toolbar>label,.player-toolbar>details{flex:none}
+/* 显示方式菜单：工具栏贴近视口底部，弹层必须向上展开，否则会被窗口下沿截断。
+   继承全局 .action-menu / .action-popover 的外观，这里只改方向与宽度。 */
+.view-menu>.action-popover{top:auto;bottom:calc(100% + 5px);right:auto;left:0;min-width:150px}
+.view-menu[open]>summary{background:var(--brand-soft);border-color:var(--brand);color:var(--brand)}
 .player-keys{margin-left:auto;cursor:help;white-space:nowrap}
+/* 网速读数：等宽数字避免每秒刷新时宽度跳动带动整条工具栏重排 */
+.net-meter{cursor:help;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
+.net-meter b{font-weight:600;color:var(--text,#111)}
+/* 上游明显低于转码输出时标红：此时瓶颈在网络，而非本机转码 */
+.net-meter.net-slow b.net-up{color:#c62828}
 #playbackError{font-size:12px;max-height:110px;overflow:auto;margin-top:6px}
 #playbackError:empty{display:none}
 .player-hint{margin:6px 0 0}

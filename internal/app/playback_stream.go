@@ -120,7 +120,10 @@ func playbackFFmpegArgs(media providerMedia, input string, offset float64, quali
 		"-movflags", "+frag_keyframe+empty_moov+default_base_moof", "-frag_duration", "1000000", "-f", "mp4", "pipe:1")
 }
 
-func (app *UIApp) streamPlayback(ctx context.Context, cancel context.CancelFunc, writer http.ResponseWriter, task Task, downloadID string, offset float64, run uint64, quality int, ready func(float64)) (resultErr error) {
+// meters 可为 nil（预缓存后台取流不参与速率展示）。非 nil 时统计两个速率：
+// upstream 是本机从站源拉取分片的速度，output 是 FFmpeg 转码后写给浏览器的速度。
+// 播放本地已下载文件时没有上游流量，标记 local 以便界面区分「无上游」和「上游为 0」。
+func (app *UIApp) streamPlayback(ctx context.Context, cancel context.CancelFunc, writer http.ResponseWriter, task Task, downloadID string, offset float64, run uint64, quality int, meters *playbackMeters, ready func(float64)) (resultErr error) {
 	started := false
 	defer func() {
 		if resultErr != nil && !started {
@@ -151,8 +154,13 @@ func (app *UIApp) streamPlayback(ctx context.Context, cancel context.CancelFunc,
 		if err != nil {
 			return err
 		}
+		if meters != nil {
+			proxy.meter = &meters.upstream
+		}
 		defer proxy.Close()
 		input = proxy.root
+	} else if meters != nil {
+		meters.markLocal()
 	}
 	ffmpeg, err := app.downloader.ensureFFmpeg(ctx)
 	if err != nil {
@@ -233,6 +241,7 @@ func (app *UIApp) streamPlayback(ctx context.Context, cancel context.CancelFunc,
 		if _, err := writer.Write(buffer[:count]); err != nil {
 			return err
 		}
+		meters.addOutput(count)
 		if err := controller.Flush(); err != nil {
 			return err
 		}

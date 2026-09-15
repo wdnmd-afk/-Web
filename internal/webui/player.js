@@ -9,6 +9,7 @@
   const SEEK_DEBOUNCE_MS = 420;       // 连续拖动停手后才重新取流
   const SEEK_STEP_SECONDS = 5;        // 方向键快进快退步长
   const PROGRESS_REPORT_MS = 5000;    // 观看进度上报间隔
+  const METER_POLL_MS = 1000;         // 网速读数刷新间隔
   const AUTO_RETRY_LIMIT = 2;         // 取流失败自动重试次数
   const panel = node('playerView');
   const video = node('onlineVideo');
@@ -38,6 +39,8 @@
   let loading = false;
   let heartbeatTimer = null;
   let heartbeatPending = false;
+  let meterTimer = null;
+  let meterPending = false;
   let seekTimer = null;
   let lastPosition = 0;
   let knownDuration = 0;
@@ -64,6 +67,12 @@
   const qualitySelect = node('playbackQuality');
   const rateSelect = node('playbackRate');
   const autoNextToggle = node('autoNextEpisode');
+  const netMeter = node('netMeter');
+  // 网速读数分两段，上游单独用 <b class="net-up"> 包裹，卡顿时只标红上游那一段。
+  // 元素只建一次、之后只改文本，避免每秒重建 DOM。
+  const netUpstream = document.createElement('b');
+  netUpstream.className = 'net-up';
+  const netOutput = document.createElement('b');
   // ===== 偏好记忆：画质、预缓存、倍速、自动连播、音量 =====
   // 画质档位由后端下发（实测红果提供 360/480/540/720/1080），记住上次选择
   let currentQuality = 720;
@@ -210,6 +219,7 @@
     clearInterval(heartbeatTimer);
     heartbeatTimer = null;
     heartbeatPending = false;
+    stopMeters();
     stopStream();
     hideOverlay();
     toast('');
@@ -348,15 +358,83 @@
     }
   }
 
-  // 窗口标题跟随正在播放的剧与集数，开了几个窗口在任务栏里也分得清
+  function formatRate(bytesPerSecond) {
+    const value = Number(bytesPerSecond) || 0;
+    if (value >= 1024 * 1024) return (value / (1024 * 1024)).toFixed(1) + ' MB/s';
+    return Math.round(value / 1024) + ' KB/s';
+  }
+
+  // 两个数字分别回答不同的问题：
+  // 上游 = 后端从红果拉分片的速度，反映网络；转码 = FFmpeg 写给浏览器的速度，受 CPU 限制。
+  // 两者的码率本来就不同（上游是源站 H.265，转码是 H.264），所以不做比值判断，
+  // 只在明显停顿时标红：正在播却几乎没有上游流量，才是真的卡在网络上。
+  function renderMeters(view) {
+    if (!view) {netMeter.hidden = true; return;}
+    netMeter.hidden = false;
+    // 首次渲染时装配结构：上游 <b> · 转码 <b>，之后只更新两个 <b> 的文本。
+    if (!netMeter.contains(netUpstream)) {
+      netMeter.textContent = '';
+      netMeter.append('上游 ', netUpstream, ' · 转码 ', netOutput);
+    }
+    netOutput.textContent = formatRate(view.outputRate);
+    if (view.local) {
+      netUpstream.textContent = '本地';
+      netMeter.classList.remove('net-slow');
+      return;
+    }
+    netUpstream.textContent = formatRate(view.upstreamRate);
+    // 正在播却几乎没有上游流量，才判定卡在网络上。
+    // 暂停时不判定：暂停后缓冲很快填满，上游本就该降到 0。
+    const stalled = !video.paused && Number(view.upstreamRate) < 20 * 1024 && Number(view.outputRate) < 20 * 1024;
+    netMeter.classList.toggle('net-slow', stalled);
+  }
+
+  async function pollMeters() {
+    if (!sessionID || meterPending) return;
+    const currentSession = sessionID;
+    meterPending = true;
+    try {
+      const state = await requestJSON('/api/ui/playback/status?session=' + encodeURIComponent(currentSession), undefined, openingController?.signal);
+      if (currentSession === sessionID) renderMeters(state.meters);
+    } catch (error) {
+      if (currentSession === sessionID && error.status === 410) stopMeters();
+    } finally {
+      if (currentSession === sessionID) meterPending = false;
+    }
+  }
+
+  function startMeters() {
+    if (meterTimer) return;
+    meterTimer = setInterval(pollMeters, METER_POLL_MS);
+    pollMeters();
+  }
+
+  function stopMeters() {
+    clearInterval(meterTimer);
+    meterTimer = null;
+    meterPending = false;
+    netMeter.hidden = true;
+    netMeter.classList.remove('net-slow');
+  }
+
+  // 窗口标题跟随正在播放的剧与集数，开了几个窗口在任务栏里也分得清。
+  // 画面内右下角也放一份：纯净/全屏/网页全屏模式下 player-bar 被隐藏，
+  // 没有这一份的话画面上就完全看不到自己在看哪部哪集。
   function syncTitle() {
     const base = '果果剧库';
     let title = base;
+    let info = '';
     if (isOpen && dramaName) {
       const label = episodes[currentIndex - 1]?.episode;
       title = dramaName + (label ? ' 第' + label + '集' : '') + ' - ' + base;
+      // 与工具栏 playbackEpisodeCount 同一口径：分集号缺失时回退用序号
+      info = dramaName + ' · 第 ' + (label || currentIndex || '—') + ' 集 / 共 ' + (episodes.length || '—') + ' 集';
     }
     if (windows) windows.setTitle(title); else document.title = title;
+    const stageInfo = node('stageInfo');
+    stageInfo.textContent = info;
+    // 标题过长被省略号截断时，悬停仍能看全
+    stageInfo.title = info;
   }
 
   function showPlayerView() {
@@ -414,6 +492,7 @@
       renderEpisodes();
       renderQualityOptions(result.qualityOptions, result.defaultQuality);
       heartbeatTimer = setInterval(heartbeat, 20000);
+      startMeters();
       let startIndex = initialIndex;
       let startOffset = offset;
       if (!startIndex && dramaID && window.JukuHistory) {
@@ -478,6 +557,19 @@
       if (video.currentTime >= video.buffered.start(index) && video.currentTime <= video.buffered.end(index)) return video.buffered.end(index) - video.currentTime;
     }
     return 0;
+  }
+
+  // bufferTargetSeconds 把缓冲目标按倍速折算。
+  // buffered 里的秒数是「视频时间」，倍速播放会成倍地快速消耗：
+  // 3 倍速下固定的 120 秒只等效 40 秒真实时间，而 FFmpeg 大致按 1 倍速产出，
+  // 于是必然边播边等。按倍速放大目标，真实时间的余量才保持不变。
+  // 上限取基准的 3 倍，避免高倍速下 MediaSource 占用无节制增长。
+  // paused 由调用方传入：首帧就绪前 video.paused 本就为真，
+  // 若在此直接读它会把初次缓冲目标降到暂停档，白白截短首帧前的缓冲。
+  function bufferTargetSeconds(paused) {
+    const base = paused ? PAUSED_BUFFER_SECONDS : TARGET_BUFFER_SECONDS;
+    const rate = Math.max(Number(video.playbackRate) || 1, 1);
+    return base * Math.min(rate, 3);
   }
 
   function renderPrefetchStatus(view) {
@@ -609,7 +701,7 @@
       reader = response.body.getReader();
       let initialized = false;
       while (!signal.aborted) {
-        while (!signal.aborted && bufferedAhead() > (video.paused && initialized ? PAUSED_BUFFER_SECONDS : TARGET_BUFFER_SECONDS)) {
+        while (!signal.aborted && bufferedAhead() > bufferTargetSeconds(video.paused && initialized)) {
           await new Promise(resolve => setTimeout(resolve, 200));
         }
         if (signal.aborted) throw abortError();
@@ -802,6 +894,16 @@
   node('popWindowBtn').addEventListener('click', () => popOut(false));
   // 画面内的弹出图标：小窗模式下弹成独立小窗，其余弹成普通播放窗口
   node('icoPopBtn').addEventListener('click', () => popOut(floating));
+
+  // 「显示方式」折叠菜单：点任一项后收起，点菜单外也收起。
+  // 与下载页 batchMenu 用的是同一套交互，保持一致。
+  const viewModeMenu = node('viewModeMenu');
+  viewModeMenu.addEventListener('click', event => {
+    if (event.target.closest('button')) viewModeMenu.open = false;
+  });
+  document.addEventListener('click', event => {
+    if (viewModeMenu.open && !viewModeMenu.contains(event.target)) viewModeMenu.open = false;
+  });
   // Esc 分层退出：先退原生全屏 / 网页全屏 / 纯净模式 / 小窗，最后才返回
   function escape() {
     if (episodesOpen) {setEpisodesPanel(false); return;}

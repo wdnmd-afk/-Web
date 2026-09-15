@@ -246,7 +246,8 @@ func (app *UIApp) handlePlaybackPrefetch(writer http.ResponseWriter, request *ht
 		defer cache.cancel()
 		startup := time.AfterFunc(60*time.Second, cache.cancel)
 		defer startup.Stop()
-		err := app.streamPlayback(cache.ctx, cache.cancel, cache, task, downloadID, 0, 0, quality, func(float64) { startup.Stop() })
+		// meters 传 nil：预缓存是后台任务，它的流量不应混进当前播放的网速读数。
+		err := app.streamPlayback(cache.ctx, cache.cancel, cache, task, downloadID, 0, 0, quality, nil, func(float64) { startup.Stop() })
 		cache.finish(err)
 	}()
 	writeJSON(writer, http.StatusAccepted, &playbackPrefetchView{Episode: input.Episode, State: "preparing"})

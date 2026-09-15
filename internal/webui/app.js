@@ -63,7 +63,9 @@
   function updateRefreshLabel() { const source = $('sourceSelect').value; const hongguo = !source || source === 'hongguo'; updateLibraryButton(); $('onlineSearchBtn').hidden = !hongguo; $('searchInput').placeholder = hongguo ? '本地筛选，回车联网搜红果' : '搜索剧名、简介、标签'; }
   function placeholder(text) { return element('div', 'cover placeholder', text || '暂无封面'); }
   function dramaMetaText(drama) { return firstNonEmpty(drama.remark, episodeCount(drama) ? '共 ' + episodeCount(drama) + ' 集' : '') + (drama.onlineDate ? ' · ' + drama.onlineDate : ''); }
-  function dramaCardKey(drama) { return JSON.stringify([dramaTitle(drama), sourceKey(drama), categoryName(drama), episodeCount(drama), coverURL(drama), drama.remark, firstNonEmpty(drama.desc, drama.intro), tagsText(drama).slice(0, 4)]); }
+  // 卡片复用键只包含卡片真正渲染的字段：简介已不在卡片里显示，
+  // 若继续参与比对，简介变动会白白让整张卡重建。标签取前 3 个，与渲染一致。
+  function dramaCardKey(drama) { return JSON.stringify([dramaTitle(drama), sourceKey(drama), categoryName(drama), episodeCount(drama), coverURL(drama), drama.remark, tagsText(drama).slice(0, 3)]); }
   function dramaByID(id) { return dramas.find(drama => drama.id === id) || null; }
 
   // ===== 视图切换：剧库 / 历史 / 下载 / 播放 =====
@@ -156,14 +158,15 @@
     const badge = resumeBadge(drama); if (badge) poster.appendChild(badge);
     poster.addEventListener('click', () => { if (cards.classList.contains('selecting')) toggleSelected(drama.id, card); else playDrama(drama); });
     const body = element('div', 'card-body');
-    const title = element('div', 'card-title', dramaTitle(drama)); title.addEventListener('click', () => playDrama(drama)); body.appendChild(title);
+    // 标题截断到两行，完整名字挂 title 属性，鼠标悬停仍可看全
+    const title = element('div', 'card-title', dramaTitle(drama)); title.title = dramaTitle(drama); title.addEventListener('click', () => playDrama(drama)); body.appendChild(title);
     body.appendChild(element('div', 'meta', dramaMetaText(drama)));
-    const description = firstNonEmpty(drama.desc, drama.intro); if (description) body.appendChild(element('div', 'meta desc', description));
-    const tags = element('div', 'tags'); tagsText(drama).slice(0, 4).forEach(text => tags.appendChild(element('span', 'tag', text))); body.appendChild(tags);
-    const actions = element('div', 'card-actions');
-    const label = element('label', 'select-line'); const checkbox = element('input'); checkbox.type = 'checkbox'; checkbox.checked = selected.has(drama.id); checkbox.setAttribute('aria-label', '选择 ' + dramaTitle(drama)); checkbox.addEventListener('change', () => {if (checkbox.checked) selected.add(drama.id); else selected.delete(drama.id); card.classList.toggle('selected', checkbox.checked); updateDramaSelection();}); label.appendChild(checkbox); label.appendChild(document.createTextNode('选择')); actions.appendChild(label);
-    actions.appendChild(button('↓ 下载', () => enqueueDramas([drama.id]), false, 'secondary card-download'));
-    body.appendChild(actions);
+    // 正文高度固定，简介放不进来；完整简介在播放页侧栏和右键菜单里看
+    const tags = element('div', 'tags'); tagsText(drama).slice(0, 3).forEach(text => tags.appendChild(element('span', 'tag', text))); body.appendChild(tags);
+    // 勾选框浮在封面左上角，只在多选模式显示。
+    // 卡片正文不再放「下载」按钮：首页以浏览和点击即播为主，
+    // 加入下载走右键菜单或「批量下载」，卡片高度因此可以固定。
+    const label = element('label', 'select-line'); const checkbox = element('input'); checkbox.type = 'checkbox'; checkbox.checked = selected.has(drama.id); checkbox.setAttribute('aria-label', '选择 ' + dramaTitle(drama)); checkbox.addEventListener('click', event => event.stopPropagation()); checkbox.addEventListener('change', () => {if (checkbox.checked) selected.add(drama.id); else selected.delete(drama.id); card.classList.toggle('selected', checkbox.checked); updateDramaSelection();}); label.appendChild(checkbox); poster.appendChild(label);
     card.appendChild(poster); card.appendChild(body); window.JukuMenu?.attach(card, () => dramaMenu(drama, card), dramaTitle(drama)); return card;
   }
   function toggleSelected(id, card) { if (selected.has(id)) selected.delete(id); else selected.add(id); card.classList.toggle('selected', selected.has(id)); const box = card.querySelector('input[type=checkbox]'); if (box) box.checked = selected.has(id); updateDramaSelection(); }
@@ -179,6 +182,78 @@
       if (old) old.remove(); if (fresh) poster.appendChild(fresh);
     }
   }
+
+  // ===== 首页「继续观看」横向轨道 =====
+  // 只读观看历史，不新增任何接口：历史里已经存了每部剧看到第几集、第几秒。
+  // 点封面直接开播，续播位置仍由 player.js 内部查 resumeFor 决定，
+  // 所以这里不传集数与偏移，避免两处各算一遍导致口径不一致。
+  const RESUME_ROW_LIMIT = 12;              // 最多展示的部数，超出的去「全部历史」看
+  const resumeRow = $('resumeRow');
+  const resumeTrack = $('resumeTrack');
+  // 已看完且没有下一集的剧不放进轨道：它不再是「继续」，留着只会占位置
+  function resumeRowEntries() {
+    const all = window.JukuHistory?.entries() || [];
+    return all.filter(entry => {
+      if (!entry || !(entry.lastIndex > 0)) return false;
+      if (!entry.finished) return true;
+      return entry.episodeCount > 0 && entry.lastIndex < entry.episodeCount;
+    }).slice(0, RESUME_ROW_LIMIT);
+  }
+  // 用真正的 button：焦点、回车/空格触发、无障碍语义都由浏览器给，不用手写 tabIndex 和 keydown
+  function renderResumeItem(entry) {
+    const item = element('button', 'resume-card');
+    item.type = 'button';
+    item.dataset.dramaId = entry.dramaId;
+    const title = entry.title || entry.dramaId;
+    const badge = window.JukuHistory?.badgeText(entry) || '';
+    item.title = title + (badge ? '\n' + badge : '');
+    item.setAttribute('aria-label', (entry.finished ? '看下一集：' : '继续观看：') + title + (badge ? '，' + badge : ''));
+    const thumb = element('div', 'resume-thumb');
+    // 封面优先用历史里存的，历史没有再回退到剧库缓存（历史条目可能早于剧库补齐资料）
+    const drama = dramaByID(entry.dramaId);
+    const cover = entry.cover || (drama ? coverURL(drama) : '');
+    if (cover) {
+      const image = element('img'); image.src = cover; image.alt = ''; image.loading = 'lazy'; image.decoding = 'async';
+      image.addEventListener('error', () => image.remove());
+      thumb.appendChild(image);
+    }
+    const play = element('div', 'resume-play');
+    play.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-2 6.5 6 3.5-6 3.5v-7z"/></svg>';
+    thumb.appendChild(play);
+    // 进度条压在缩略图底部，一眼看出还剩多少
+    const bar = element('div', 'resume-bar'); const fill = element('span');
+    fill.style.width = (window.JukuHistory?.progressPercent(entry) || 0) + '%';
+    bar.appendChild(fill); thumb.appendChild(bar);
+    item.appendChild(thumb);
+    const body = element('div', 'resume-body');
+    body.appendChild(element('div', 'resume-name', title));
+    body.appendChild(element('div', 'resume-at', badge));
+    item.appendChild(body);
+    const open = () => playEntry(entry);
+    item.addEventListener('click', open);
+    window.JukuMenu?.attach(item, () => [
+      {label: entry.finished ? '看下一集' : '继续观看', hint: badge, action: open},
+      ...(window.JukuWindows?.menuItems(entry.mode === 'collection' && entry.taskId ? {taskId: entry.taskId, dramaId: entry.dramaId, title: entry.title} : {dramaId: entry.dramaId, title: entry.title}) || [])
+    ], title);
+    return item;
+  }
+  // 合集与普通剧的开播入口不同，与历史视图保持一致的分流
+  function playEntry(entry) {
+    if (!window.dramaPlayer) return;
+    if (entry.mode === 'collection' && entry.taskId) window.dramaPlayer.openCollection(entry.taskId, entry.title, entry.dramaId);
+    else window.dramaPlayer.open(entry.dramaId, entry.title || '短剧');
+  }
+  function renderResumeRow() {
+    // 独立播放窗口没有剧库视图，容器不存在
+    if (!resumeRow || !resumeTrack || window.JukuWindows?.isWindow) return;
+    const list = resumeRowEntries();
+    resumeRow.hidden = !list.length;
+    if (!list.length) {resumeTrack.replaceChildren(); return;}
+    const fragment = document.createDocumentFragment();
+    for (const entry of list) fragment.appendChild(renderResumeItem(entry));
+    resumeTrack.replaceChildren(fragment);
+  }
+  $('resumeMoreBtn')?.addEventListener('click', () => showView('history'));
 
   function renderDramas() {
     // 独立播放窗口不显示剧库，只留数据供简介和历史上报使用，省掉上千张卡片的渲染
@@ -249,7 +324,7 @@
   function selectedGroupIDs() { return Array.from(new Set(selectedTaskList().map(task => task.dramaId))); }
   function updateTaskSelection() { const visible = new Set(visibleGroups.flatMap(group => group.tasks.map(task => task.id))); const hidden = selectedTaskList().filter(task => !visible.has(task.id)).length; $('taskSelection').textContent = '已选 ' + selectedTasks.size + ' 集 / ' + selectedGroupIDs().length + ' 部' + (hidden ? '（隐藏 ' + hidden + ' 集）' : ''); for (const id of ['pauseSelectedBtn', 'resumeSelectedBtn', 'cancelSelectedBtn', 'retrySelectedBtn', 'updateSelectedBtn', 'mergeSelectedBtn', 'clearTasksBtn']) $(id).disabled = selectedTasks.size === 0; }
   function updateDownloadsBadge() { const active = tasks.filter(task => ['running', 'queued', 'parsing'].includes(task.status)).length; $('downloadsBadge').textContent = active ? String(active) : ''; $('downloadsBadge').title = active ? active + ' 个分集进行中' : ''; }
-  function renderTasks(next) { tasks = next; const existing = new Set(tasks.map(task => task.id)); selectedTasks.forEach(id => {if (!existing.has(id)) selectedTasks.delete(id);}); updateDownloadsBadge(); if (views.downloads.hidden && tasks.length) {updateTaskSelection(); return;} const all = buildGroups(); visibleGroups = all.filter(groupMatches); $('taskCount').textContent = visibleGroups.length + ' / ' + all.length; empty(groupsEl); visibleGroups.forEach(group => groupsEl.appendChild(renderGroup(group))); if (!visibleGroups.length) groupsEl.appendChild(element('div', 'empty', tasks.length ? '没有符合筛选条件的合集' : '还没有下载任务。在剧库里点击卡片上的“↓ 下载”，或用“批量下载”多选加入。')); updateTaskSelection(); }
+  function renderTasks(next) { tasks = next; const existing = new Set(tasks.map(task => task.id)); selectedTasks.forEach(id => {if (!existing.has(id)) selectedTasks.delete(id);}); updateDownloadsBadge(); if (views.downloads.hidden && tasks.length) {updateTaskSelection(); return;} const all = buildGroups(); visibleGroups = all.filter(groupMatches); $('taskCount').textContent = visibleGroups.length + ' / ' + all.length; empty(groupsEl); visibleGroups.forEach(group => groupsEl.appendChild(renderGroup(group))); if (!visibleGroups.length) groupsEl.appendChild(element('div', 'empty', tasks.length ? '没有符合筛选条件的合集' : '还没有下载任务。在剧库里右键卡片选择“加入下载”，或用“批量下载”多选加入。')); updateTaskSelection(); }
   function renderGroup(group) {
     const stats = groupStats(group); const wrap = element('div', 'group' + (openGroups.has(group.id) ? ' open' : '')); const head = element('div', 'group-head'); const heading = element('div', 'group-heading'); const checkbox = element('input'); checkbox.type = 'checkbox'; checkbox.setAttribute('aria-label', '选择合集 ' + group.title); const selectedCount = group.tasks.filter(task => selectedTasks.has(task.id)).length; checkbox.checked = selectedCount === group.tasks.length; checkbox.indeterminate = selectedCount > 0 && !checkbox.checked; checkbox.addEventListener('change', () => selectGroup(group, checkbox.checked)); heading.appendChild(checkbox); const info = element('div'); info.appendChild(element('div', 'group-title', '《' + group.title + '》')); info.appendChild(element('div', 'small', releaseText(group.release) + ' · 共 ' + group.tasks.length + ' 集 · 成功 ' + stats.success + ' · 失败 ' + stats.failed + ' · 下载 ' + stats.running + ' · 解析 ' + stats.parsing + ' · 排队 ' + stats.queued + ' · 暂停 ' + stats.paused +' · 取消 ' + stats.canceled)); heading.appendChild(info); head.appendChild(heading); head.appendChild(progressBar(stats.percent)); head.appendChild(element('div', 'small', stats.percent + '% · 已写入 ' + formatBytes(stats.bytes) + ' · ' + (stats.speed > 0 ? formatBytes(stats.speed) + '/s' : '速度 —')));
     const merge = mergeStates[group.id]; if (merge) head.appendChild(element('div', merge.error ? 'error small' : 'small', '合并：' + ({running: '进行中', success: '完成', failed: '失败'}[merge.status] || merge.status) + ' ' + (merge.progress || 0) + '%' + (merge.detail ? ' · ' + merge.detail : '') + (merge.outputPath ? ' · ' + merge.outputPath : '') + (merge.error ? ' · ' + merge.error : '')));
@@ -309,7 +384,8 @@
   $('updateSelectedBtn').addEventListener('click', () => updateGroups(selectedGroupIDs())); $('mergeSelectedBtn').addEventListener('click', () => mergeGroups(selectedGroupIDs())); $('clearTasksBtn').addEventListener('click', clearTasks); $('proxyMode').addEventListener('change', updateProxyFields); $('saveSettingsBtn').addEventListener('click', saveSettings); $('checkNetworkBtn').addEventListener('click', checkNetwork);
   $('openSettingsBtn').addEventListener('click', () => {$('settingsPanel').showModal();}); $('closeSettingsBtn').addEventListener('click', () => {$('settingsPanel').close();}); $('batchMenu').addEventListener('click', event => {if (event.target.tagName === 'BUTTON') $('batchMenu').open = false;});
   window.addEventListener('downloadsChanged', pollTasks);
-  window.JukuHistory?.onChange(refreshResumeBadges);
+  // 历史一变（看完一集、删除记录、其他窗口上报）就同时刷新卡片角标和继续观看轨道
+  window.JukuHistory?.onChange(() => {refreshResumeBadges(); renderResumeRow();});
   // 切到下载页时立刻渲染一次（隐藏时只更新角标，不渲染列表）
   document.querySelector('.nav button[data-view="downloads"]').addEventListener('click', () => renderTasks(tasks));
 
